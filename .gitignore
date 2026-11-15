@@ -1,0 +1,57 @@
+# ==========================================
+# Credenciales y Configuración Local Privada
+# ==========================================
+js/config.local.js
+config.local.js
+.env
+.env.*
+*.key
+*.pem
+secrets/
+
+# ==========================================
+# Archivos del Sistema Operativo
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ==========================================
+# Editores e IDEs
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================
+# Dependencias y Empaquetado Móvil (Futuro Capacitor / Android / iOS)
+# ==========================================
+node_modules/
+dist/
+www/
+.capacitor/
+android/
+ios/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================================
+# Archivos Temporales y Backups Locales
+# ==========================================
+*.log
+*.tmp
+*.bak
+*.swp
+*~

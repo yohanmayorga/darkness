@@ -1,0 +1,138 @@
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  /* ==========================================
+     Paleta Monocromática / Plata — Modo Oscuro
+     ========================================== */
+  --bg-canvas: #09090B;
+  --bg-surface: #101013;
+  --bg-surface-elevated: #16161A;
+  --bg-surface-hover: #1C1C22;
+  --bg-surface-active: #24242C;
+  --bg-glass: rgba(16, 16, 19, 0.86);
+  --bg-backdrop: rgba(0, 0, 0, 0.72);
+
+  /* Texto */
+  --text-primary: #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #63636B;
+  --text-inverse: #09090B;
+
+  /* Acentos Plata / Titanio */
+  --accent-primary: #E4E4E7;
+  --accent-primary-hover: #FAFAFA;
+  --accent-secondary: #3F3F46;
+  --accent-subtle: rgba(228, 228, 231, 0.07);
+  --accent-Glow: rgba(228, 228, 231, 0.14);
+
+  /* Bordes y Divisores */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.11);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --border-focus: #D4D4D8;
+
+  /* Colores Semánticos Sobrios */
+  --status-success: #34D399;
+  --status-success-bg: rgba(52, 211, 153, 0.1);
+  --status-warning: #FBBF24;
+  --status-warning-bg: rgba(251, 191, 36, 0.1);
+  --status-danger: #F87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.1);
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+
+  /* Gráficos y Memento Mori */
+  --chart-line: #E4E4E7;
+  --chart-fill: rgba(228, 228, 231, 0.08);
+  --chart-grid: rgba(255, 255, 255, 0.05);
+  --memento-filled: #D4D4D8;
+  --memento-empty: rgba(255, 255, 255, 0.18);
+  --memento-current: #FAFAFA;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  /* ==========================================
+     Paleta Monocromática / Plata — Modo Claro
+     ========================================== */
+  --bg-canvas: #F5F5F6;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FAFAFA;
+  --bg-surface-hover: #F0F0F2;
+  --bg-surface-active: #E4E4E7;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-backdrop: rgba(9, 9, 11, 0.45);
+
+  /* Texto */
+  --text-primary: #111113;
+  --text-secondary: #52525B;
+  --text-muted: #8E8E98;
+  --text-inverse: #FAFAFA;
+
+  /* Acentos Grafito / Plata Oscuro */
+  --accent-primary: #18181B;
+  --accent-primary-hover: #27272A;
+  --accent-secondary: #D4D4D8;
+  --accent-subtle: rgba(24, 24, 27, 0.05);
+  --accent-Glow: rgba(24, 24, 27, 0.1);
+
+  /* Bordes y Divisores */
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.11);
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --border-focus: #3F3F46;
+
+  /* Colores Semánticos Sobrios */
+  --status-success: #059669;
+  --status-success-bg: rgba(5, 150, 105, 0.08);
+  --status-warning: #D97706;
+  --status-warning-bg: rgba(217, 119, 6, 0.08);
+  --status-danger: #DC2626;
+  --status-danger-bg: rgba(220, 38, 38, 0.08);
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* Gráficos y Memento Mori */
+  --chart-line: #18181B;
+  --chart-fill: rgba(24, 24, 27, 0.07);
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  --memento-filled: #18181B;
+  --memento-empty: rgba(24, 24, 27, 0.22);
+  --memento-current: #000000;
+}
+
+:root {
+  /* Tipografía Minimalista y Elegante */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Dimensiones de Layout Compactas */
+  --sidebar-width: 212px;
+  --sidebar-collapsed-width: 62px;
+  --memento-sidebar-width: 300px;
+  --mobile-nav-height: 62px;
+  --mobile-topbar-height: 59px;
+  --header-height: 52px;
+  --content-max-width: 1280px;
+
+  /* Áreas Seguras Móviles (iOS Notch / Dynamic Island / Home Indicator) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Radios y Transiciones */
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 11px;
+  --radius-xl: 14px;
+  --radius-full: 9999px;
+  --transition-fast: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}

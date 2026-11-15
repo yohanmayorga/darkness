@@ -1,0 +1,18 @@
+{
+  "name": "Darkness — Personal Growth OS",
+  "short_name": "Darkness",
+  "description": "Sistema minimalista de crecimiento personal: hábitos, cuerpo, lectura, diario y finanzas.",
+  "start_url": "./index.html#/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09090B",
+  "theme_color": "#09090B",
+  "icons": [
+    {
+      "src": "assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

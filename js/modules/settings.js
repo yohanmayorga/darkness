@@ -6,10 +6,10 @@ import {
   isSupabaseConfigured,
   syncToSupabaseIfConfigured,
   pullFromSupabase
-} from '../services/db.js?v=1.3.0';
-import { getCurrentSession, loginUser, registerCloudUser, logoutUser } from '../services/auth.js?v=1.3.0';
-import { icon } from '../components/icons.js?v=1.3.0';
-import { showToast } from '../components/toast.js?v=1.3.0';
+} from '../services/db.js?v=1.4.0';
+import { getCurrentSession, loginUser, registerCloudUser, logoutUser } from '../services/auth.js?v=1.4.0';
+import { icon } from '../components/icons.js?v=1.4.0';
+import { showToast } from '../components/toast.js?v=1.4.0';
 
 export function renderSettings(container) {
   const store = getStore();

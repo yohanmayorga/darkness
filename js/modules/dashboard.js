@@ -1,8 +1,9 @@
-import { getStore, saveStore, todayISO } from '../services/db.js?v=1.3.0';
-import { icon } from '../components/icons.js?v=1.3.0';
-import { showToast } from '../components/toast.js?v=1.3.0';
-import { renderMementoSidebar } from '../components/memento.js?v=1.3.0';
-import { escapeHTML, stripHTML } from '../utils/text.js?v=1.3.0';
+import { getStore, saveStore, todayISO } from '../services/db.js?v=1.4.0';
+import { icon } from '../components/icons.js?v=1.4.0';
+import { showToast } from '../components/toast.js?v=1.4.0';
+import { renderMementoSidebar } from '../components/memento.js?v=1.4.0';
+import { escapeHTML, stripHTML } from '../utils/text.js?v=1.4.0';
+import { isScheduled, isDone, habitStreak } from '../utils/habits.js?v=1.4.0';
 
 export function renderDashboard(container) {
   const store = getStore();
@@ -11,9 +12,10 @@ export function renderDashboard(container) {
   // Actualizar columna derecha Memento Mori
   renderMementoSidebar();
 
-  // 1. Métricas de Hábitos
-  const totalHabits = store.habits.length;
-  const completedToday = store.habits.filter(h => h.logs && h.logs[today]).length;
+  // 1. Métricas de Hábitos (sólo cuentan los programados para hoy)
+  const todayHabits = store.habits.filter(h => isScheduled(h, today));
+  const totalHabits = todayHabits.length;
+  const completedToday = todayHabits.filter(h => isDone(h, today)).length;
   const habitsPct = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0;
 
   // 2. Métricas Corporales
@@ -115,11 +117,12 @@ export function renderDashboard(container) {
       <section class="card">
         <div class="card-header">
           <h2 class="card-title">${icon('habits')} Check-in Rápido de Hoy</h2>
-          <a href="#/habits" class="btn btn-ghost btn-sm">Ver matriz →</a>
+          <a href="#/habits" class="btn btn-ghost btn-sm">Panel completo →</a>
         </div>
         <div id="dash-habits-list">
-          ${store.habits.map(h => {
-            const done = Boolean(h.logs && h.logs[today]);
+          ${todayHabits.length === 0 ? `<div class="empty-state">Hoy no tienes hábitos programados.</div>` : ''}
+          ${todayHabits.map(h => {
+            const done = isDone(h, today);
             return `
               <div class="habit-row">
                 <div style="display:flex;align-items:center;gap:10px;">
@@ -127,11 +130,11 @@ export function renderDashboard(container) {
                     ${icon('check')}
                   </button>
                   <div>
-                    <div style="font-weight:500;font-size:0.82rem;${done ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${h.name}</div>
-                    <span class="badge" style="margin-top:3px;">${h.category}</span>
+                    <div style="font-weight:500;font-size:0.82rem;${done ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${escapeHTML(h.name)}</div>
+                    <span class="badge" style="margin-top:3px;">${escapeHTML(h.category)}</span>
                   </div>
                 </div>
-                <span class="mono text-secondary" style="font-size:0.72rem;">${h.targetDaysPerWeek}d/sem</span>
+                <span class="mono text-secondary" style="font-size:0.72rem;">${habitStreak(h, today)}d</span>
               </div>
             `;
           }).join('')}
@@ -195,7 +198,8 @@ export function renderDashboard(container) {
       const habit = currentStore.habits.find(item => item.id === id);
       if (!habit) return;
       if (!habit.logs) habit.logs = {};
-      habit.logs[today] = !habit.logs[today];
+      if (habit.logs[today]) delete habit.logs[today];
+      else habit.logs[today] = true;
       saveStore(currentStore);
       showToast(habit.logs[today] ? `Hábito completado: ${habit.name}` : `Hábito desmarcado`);
       renderDashboard(container);

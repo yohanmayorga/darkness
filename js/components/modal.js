@@ -1,4 +1,4 @@
-import { icon } from './icons.js?v=1.3.0';
+import { icon } from './icons.js?v=1.4.0';
 
 /**
  * Sistema de Modales Reutilizable

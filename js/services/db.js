@@ -1,6 +1,8 @@
-import { SUPABASE_CONFIG } from '../config.example.js?v=1.3.0';
+import { SUPABASE_CONFIG } from '../config.example.js?v=1.4.0';
+import { createDefaultHabits, normalizeHabit } from '../utils/habits.js?v=1.4.0';
 
 const STORAGE_KEY = 'darkness_store_v1';
+const HABITS_SCHEMA = 2;
 const SUPA_CFG_KEY = 'darkness_supabase_cfg';
 
 let supabaseClient = null;
@@ -35,36 +37,8 @@ function getInitialStore() {
         unit: 'months'
       }
     },
-    habits: [
-      {
-        id: 'hab-1',
-        name: 'Entrenamiento de fuerza / Movilidad',
-        category: 'Cuerpo',
-        targetDaysPerWeek: 5,
-        logs: { [today]: true }
-      },
-      {
-        id: 'hab-2',
-        name: 'Lectura profunda (30 min)',
-        category: 'Mente',
-        targetDaysPerWeek: 7,
-        logs: { [today]: true }
-      },
-      {
-        id: 'hab-3',
-        name: 'Hidratación 3L + Sin azúcar refinada',
-        category: 'Salud',
-        targetDaysPerWeek: 7,
-        logs: {}
-      },
-      {
-        id: 'hab-4',
-        name: 'Revisión financiera y planificación diaria',
-        category: 'Disciplina',
-        targetDaysPerWeek: 6,
-        logs: {}
-      }
-    ],
+    habitsSchema: HABITS_SCHEMA,
+    habits: createDefaultHabits(today),
     bodyMetrics: [
       {
         id: 'bm-1',
@@ -211,6 +185,14 @@ export function getStore() {
         unit: 'months'
       };
     }
+    // Migración v2 de hábitos: programación por días + vigencia (desde / hasta)
+    if (!parsed.habitsSchema || parsed.habitsSchema < HABITS_SCHEMA) {
+      parsed.habits = createDefaultHabits(todayISO());
+      parsed.habitsSchema = HABITS_SCHEMA;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }
+    if (!Array.isArray(parsed.habits)) parsed.habits = [];
+    parsed.habits.forEach(h => normalizeHabit(h, todayISO()));
     return parsed;
   } catch (e) {
     console.error('Error leyendo store local:', e);

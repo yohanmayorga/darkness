@@ -51,6 +51,15 @@
   --memento-filled: #D4D4D8;
   --memento-empty: rgba(255, 255, 255, 0.18);
   --memento-current: #FAFAFA;
+
+  /* Hábitos: barras y mapa de calor de cumplimiento */
+  --chart-bar: rgba(228, 228, 231, 0.32);
+  --chart-bar-strong: #E4E4E7;
+  --heat-0: rgba(248, 113, 113, 0.08);
+  --heat-1: rgba(228, 228, 231, 0.12);
+  --heat-2: rgba(228, 228, 231, 0.26);
+  --heat-3: rgba(228, 228, 231, 0.48);
+  --heat-4: #E4E4E7;
 }
 
 [data-theme="light"] {
@@ -105,6 +114,15 @@
   --memento-filled: #18181B;
   --memento-empty: rgba(24, 24, 27, 0.22);
   --memento-current: #000000;
+
+  /* Hábitos: barras y mapa de calor de cumplimiento */
+  --chart-bar: rgba(24, 24, 27, 0.26);
+  --chart-bar-strong: #18181B;
+  --heat-0: rgba(220, 38, 38, 0.07);
+  --heat-1: rgba(24, 24, 27, 0.08);
+  --heat-2: rgba(24, 24, 27, 0.2);
+  --heat-3: rgba(24, 24, 27, 0.42);
+  --heat-4: #18181B;
 }
 
 :root {

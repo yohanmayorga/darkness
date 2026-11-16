@@ -1,4 +1,4 @@
-import { getSupabaseClient, getStore, saveStore, pullFromSupabase, syncToSupabaseIfConfigured } from './db.js?v=1.3.0';
+import { getSupabaseClient, getStore, saveStore, pullFromSupabase, syncToSupabaseIfConfigured } from './db.js?v=1.4.0';
 
 const SESSION_KEY = 'darkness_session_v1';
 

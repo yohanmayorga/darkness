@@ -1,10 +1,10 @@
-import { renderDashboard } from './modules/dashboard.js?v=1.3.0';
-import { renderHabits } from './modules/habits.js?v=1.3.0';
-import { renderBody } from './modules/body.js?v=1.3.0';
-import { renderReading } from './modules/reading.js?v=1.3.0';
-import { renderJournal } from './modules/journal.js?v=1.3.0';
-import { renderFinance } from './modules/finance.js?v=1.3.0';
-import { renderSettings } from './modules/settings.js?v=1.3.0';
+import { renderDashboard } from './modules/dashboard.js?v=1.4.0';
+import { renderHabits } from './modules/habits.js?v=1.4.0';
+import { renderBody } from './modules/body.js?v=1.4.0';
+import { renderReading } from './modules/reading.js?v=1.4.0';
+import { renderJournal } from './modules/journal.js?v=1.4.0';
+import { renderFinance } from './modules/finance.js?v=1.4.0';
+import { renderSettings } from './modules/settings.js?v=1.4.0';
 
 const ROUTES = {
   '/dashboard': renderDashboard,

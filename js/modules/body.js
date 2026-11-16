@@ -1,7 +1,7 @@
-import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=1.3.0';
-import { icon } from '../components/icons.js?v=1.3.0';
-import { openModal, closeModal } from '../components/modal.js?v=1.3.0';
-import { showToast } from '../components/toast.js?v=1.3.0';
+import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=1.4.0';
+import { icon } from '../components/icons.js?v=1.4.0';
+import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
+import { showToast } from '../components/toast.js?v=1.4.0';
 
 /**
  * Genera una gráfica SVG monocromática limpia de evolución de peso

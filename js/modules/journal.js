@@ -1,6 +1,6 @@
-import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=1.3.0';
-import { icon } from '../components/icons.js?v=1.3.0';
-import { showToast } from '../components/toast.js?v=1.3.0';
+import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=1.4.0';
+import { icon } from '../components/icons.js?v=1.4.0';
+import { showToast } from '../components/toast.js?v=1.4.0';
 import {
   escapeHTML,
   stripHTML,
@@ -10,7 +10,7 @@ import {
   toEditorHTML,
   normalizeText,
   countWords
-} from '../utils/text.js?v=1.3.0';
+} from '../utils/text.js?v=1.4.0';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const MONTHS_SHORT = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];

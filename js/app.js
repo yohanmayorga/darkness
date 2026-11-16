@@ -1,7 +1,7 @@
-import { initRouter, getActiveRoute } from './router.js?v=1.3.0';
-import { getStore, isSupabaseConfigured } from './services/db.js?v=1.3.0';
-import { icon } from './components/icons.js?v=1.3.0';
-import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.3.0';
+import { initRouter, getActiveRoute } from './router.js?v=1.4.0';
+import { getStore, isSupabaseConfigured } from './services/db.js?v=1.4.0';
+import { icon } from './components/icons.js?v=1.4.0';
+import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.4.0';
 
 const THEME_KEY = 'darkness_theme';
 const SIDEBAR_KEY = 'darkness_sidebar_collapsed';

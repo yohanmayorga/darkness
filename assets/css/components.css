@@ -775,6 +775,43 @@
   width: 100%;
   height: 100%;
   overflow: visible;
+  display: block;
+}
+
+.chart-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chart-point-dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--bg-surface);
+  border: 2px solid var(--chart-line);
+  transform: translate(-50%, -50%);
+}
+
+.chart-point-val {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.chart-point-date {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ==========================================
@@ -902,6 +939,15 @@
   line-height: 1.1;
 }
 
+.cyber-clock-day {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hud-text-muted);
+  line-height: 1;
+}
+
 .cyber-clock-main {
   display: flex;
   flex-direction: column;
@@ -945,5 +991,97 @@
   .cyber-clock-main {
     grid-column: 1 / -1;
     order: -1;
+  }
+}
+
+/* ==========================================
+   Panel Lateral Derecho Unificado (Todas las Secciones)
+   ========================================== */
+.body-aside,
+.section-aside {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--right-sidebar-width, 330px);
+  background-color: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  padding: 16px 14px;
+  overflow-y: auto;
+  z-index: 38;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.body-aside > .card,
+.section-aside > .card {
+  flex-shrink: 0;
+}
+
+.body-summary-text {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--hud-text-secondary);
+}
+
+.body-summary-text strong {
+  color: var(--hud-text);
+  font-weight: 600;
+}
+
+.body-alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.body-alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background-color: var(--hud-bg-elevated);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.73rem;
+  line-height: 1.4;
+}
+
+.body-alert-item.is-warn {
+  border-left: 3px solid var(--cyber-yellow);
+}
+
+.body-alert-item.is-danger {
+  border-left: 3px solid var(--status-danger);
+}
+
+.body-alert-item.is-ok {
+  border-left: 3px solid var(--status-success);
+}
+
+.body-cal-day-action {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--hud-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 768px) {
+  .body-aside,
+  .section-aside {
+    position: static;
+    width: 100%;
+    background: transparent;
+    border-left: none;
+    padding: 0;
+    margin-top: 16px;
+    overflow-y: visible;
+    z-index: auto;
   }
 }

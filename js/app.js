@@ -1,5 +1,5 @@
-import { initRouter, getActiveRoute } from './router.js?v=2.2.0';
-import { getStore, isSupabaseConfigured } from './services/db.js?v=1.4.0';
+import { initRouter, getActiveRoute } from './router.js?v=2.6.0';
+import { getStore, isSupabaseConfigured } from './services/db.js?v=2.4.0';
 import { icon } from './components/icons.js?v=1.4.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
 
@@ -147,6 +147,7 @@ function initShell() {
     renderNavigation();
     shell?.classList.toggle('route-dashboard', activePath === '/dashboard');
     shell?.classList.toggle('route-habits', activePath === '/habits');
+    shell?.classList.toggle('route-body', activePath === '/body');
     shell?.classList.remove('memento-open');
     shell?.classList.remove('focus-mode');
   });

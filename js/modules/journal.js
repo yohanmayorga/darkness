@@ -1,6 +1,7 @@
 import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=1.4.0';
 import { icon } from '../components/icons.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
+import { buildUnifiedCalendarHTML } from '../components/calendar.js?v=2.6.0';
 import {
   escapeHTML,
   stripHTML,
@@ -205,8 +206,8 @@ function renderList(container) {
         <div id="journal-results"></div>
       </div>
 
-      <aside class="journal-aside">
-        <section class="card journal-calendar" id="journal-calendar" aria-label="Calendario de entradas"></section>
+      <aside class="journal-aside section-aside">
+        <section class="card habit-calendar" id="journal-calendar" aria-label="Calendario de entradas"></section>
         <section class="card journal-stats">
           <div class="journal-stats-grid">
             <div class="jstat"><div class="jstat-value">${entries.length}</div><div class="jstat-label">Entradas</div></div>
@@ -322,50 +323,25 @@ function renderList(container) {
   }
 
   function renderCalendar() {
-    const y = state.calYear;
-    const m = state.calMonth;
-    const offset = (new Date(y, m, 1).getDay() + 6) % 7; // Semana inicia en lunes
-    const daysInMonth = new Date(y, m + 1, 0).getDate();
     const todayIso = todayISO();
+    const markedDates = new Map();
+    countsByDate.forEach((count, iso) => {
+      markedDates.set(iso, `${count} ${count === 1 ? 'entrada' : 'entradas'}`);
+    });
 
-    let monthCount = 0;
-    let cells = WEEKDAYS.map(w => `<span class="jcal-weekday">${w}</span>`).join('');
-    for (let i = 0; i < offset; i++) cells += '<span class="jcal-day empty"></span>';
+    calNode.innerHTML = buildUnifiedCalendarHTML({
+      year: state.calYear,
+      month: state.calMonth,
+      today: todayIso,
+      selectedDate: state.selectedDate || todayIso,
+      markedDates,
+      footerLabel: 'Días con entradas',
+      legendLabel: 'con entrada'
+    });
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const iso = toISO(y, m, d);
-      const count = countsByDate.get(iso) || 0;
-      monthCount += count;
-      const cls = ['jcal-day'];
-      if (count) cls.push('has-entry');
-      if (iso === todayIso) cls.push('is-today');
-      if (iso === state.selectedDate) cls.push('is-selected');
-      if (iso > todayIso) cls.push('is-future');
-      const title = count
-        ? `${count} ${count === 1 ? 'entrada' : 'entradas'} · ${formatLongDate(iso)}`
-        : `Escribir el ${formatLongDate(iso)}`;
-      cells += `<button type="button" class="${cls.join(' ')}" data-day="${iso}" data-count="${count}" title="${title}">${d}</button>`;
-    }
-
-    calNode.innerHTML = `
-      <div class="jcal-header">
-        <span class="jcal-title">${MONTHS[m]} <span class="text-muted">${y}</span></span>
-        <div class="jcal-nav">
-          <button type="button" class="btn-icon" data-cal="prev" aria-label="Mes anterior">${icon('chevronLeft')}</button>
-          <button type="button" class="btn-icon jcal-today-btn" data-cal="today" title="Ir al mes actual">Hoy</button>
-          <button type="button" class="btn-icon" data-cal="next" aria-label="Mes siguiente">${icon('chevronRight')}</button>
-        </div>
-      </div>
-      <div class="jcal-grid">${cells}</div>
-      <div class="jcal-footer">
-        <span>${monthCount} ${monthCount === 1 ? 'entrada' : 'entradas'} este mes</span>
-        <span class="jcal-legend"><i></i>con entrada</span>
-      </div>
-    `;
-
-    calNode.querySelectorAll('[data-cal]').forEach(btn => {
+    calNode.querySelectorAll('[data-ucal]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const action = btn.dataset.cal;
+        const action = btn.getAttribute('data-ucal');
         if (action === 'today') {
           const n = new Date();
           state.calYear = n.getFullYear();
@@ -380,10 +356,10 @@ function renderList(container) {
       });
     });
 
-    calNode.querySelectorAll('[data-day]').forEach(btn => {
+    calNode.querySelectorAll('[data-ucal-day]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const iso = btn.dataset.day;
-        if (Number(btn.dataset.count) > 0) {
+        const iso = btn.getAttribute('data-ucal-day');
+        if ((countsByDate.get(iso) || 0) > 0) {
           state.selectedDate = state.selectedDate === iso ? '' : iso;
           renderCalendar();
           renderResults();

@@ -10,9 +10,20 @@ import {
 import { getCurrentSession, loginUser, registerCloudUser, logoutUser } from '../services/auth.js?v=1.4.0';
 import { icon } from '../components/icons.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
+import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
+import { todayISO } from '../services/db.js?v=2.4.0';
+
+const calState = { year: null, month: null, selectedDate: '' };
 
 export function renderSettings(container) {
   const store = getStore();
+  const today = todayISO();
+  if (calState.year === null) {
+    const [y, m] = today.split('-').map(Number);
+    calState.year = y;
+    calState.month = m - 1;
+    calState.selectedDate = today;
+  }
   const session = getCurrentSession();
   const supaCfg = getSupabaseConfig();
   const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -139,7 +150,36 @@ export function renderSettings(container) {
         </label>
       </div>
     </section>
+
+    <aside class="section-aside" aria-label="Calendario y estado del sistema">
+      <section class="card habit-calendar" id="settings-calendar" aria-label="Calendario del sistema">
+        ${buildUnifiedCalendarHTML({
+          year: calState.year,
+          month: calState.month,
+          today,
+          selectedDate: calState.selectedDate,
+          markedDates: new Map([[today, 'Hoy']]),
+          footerLabel: 'Sistema activo',
+          legendLabel: 'hoy'
+        })}
+      </section>
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">${icon('settings')} Estado del Sistema</h2>
+          <span class="cyber-tag">${isSupabaseConfigured() ? 'CLOUD' : 'LOCAL'}</span>
+        </div>
+        <p class="body-summary-text">
+          Almacenando <strong class="mono">${store.habits.length}</strong> hábitos, <strong class="mono">${store.bodyMetrics.length}</strong> mediciones, <strong class="mono">${store.books.length}</strong> libros, <strong class="mono">${store.journalEntries.length}</strong> entradas de diario y <strong class="mono">${store.transactions.length}</strong> movimientos.
+        </p>
+      </section>
+    </aside>
   `;
+
+  bindUnifiedCalendar(container.querySelector('#settings-calendar'), {
+    state: calState,
+    today,
+    onChange: () => renderSettings(container)
+  });
 
   // Cambio de tema
   container.querySelector('#btn-set-dark')?.addEventListener('click', () => {

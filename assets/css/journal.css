@@ -2,18 +2,11 @@
    DIARIO — Listado, buscador y calendario lateral
    ========================================================================== */
 .journal-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 18px;
-  align-items: start;
+  display: block;
 }
 
 .journal-aside {
-  position: sticky;
-  top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  /* Posicionado como .section-aside fija a la derecha en escritorio */
 }
 
 /* Buscador */

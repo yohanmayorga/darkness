@@ -11,18 +11,27 @@ const WORLD_CLOCKS = [
   { id: 'mad', label: 'Madrid', tz: 'Europe/Madrid' },
   { id: 'sel', label: 'Seúl', tz: 'Asia/Seoul' },
   { id: 'tyo', label: 'Tokyo', tz: 'Asia/Tokyo' },
-  { id: 'chn', label: 'China', tz: 'Asia/Shanghai' }
+  { id: 'pek', label: 'Pekín', tz: 'Asia/Shanghai' }
 ];
 
 let clockInterval = null;
 
-function formatWorldTime(now, tz) {
-  return new Intl.DateTimeFormat('es-ES', {
+function formatWorldClock(now, tz) {
+  const time = new Intl.DateTimeFormat('es-ES', {
     timeZone: tz,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
   }).format(now);
+  const weekday = new Intl.DateTimeFormat('es-ES', {
+    timeZone: tz,
+    weekday: 'short'
+  }).format(now).replace('.', '');
+  const day = new Intl.DateTimeFormat('es-ES', {
+    timeZone: tz,
+    day: '2-digit'
+  }).format(now);
+  return { time, dayLabel: `${weekday} ${day}` };
 }
 
 function updateClockBar() {
@@ -51,8 +60,11 @@ function updateClockBar() {
   if (timeEl) timeEl.textContent = timeStr;
 
   WORLD_CLOCKS.forEach(c => {
-    const el = bar.querySelector(`[data-tz="${c.id}"]`);
-    if (el) el.textContent = formatWorldTime(now, c.tz);
+    const info = formatWorldClock(now, c.tz);
+    const timeEl = bar.querySelector(`[data-tz="${c.id}"]`);
+    const dayEl = bar.querySelector(`[data-tz-day="${c.id}"]`);
+    if (timeEl) timeEl.textContent = info.time;
+    if (dayEl) dayEl.textContent = info.dayLabel;
   });
 }
 
@@ -99,6 +111,7 @@ export function renderDashboard(container) {
     <div class="cyber-clock-node" title="${c.label}">
       <span class="cyber-clock-city">${c.label}</span>
       <span class="cyber-clock-time" data-tz="${c.id}">--:--</span>
+      <span class="cyber-clock-day" data-tz-day="${c.id}">--- --</span>
     </div>
   `;
 

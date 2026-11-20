@@ -2,11 +2,20 @@ import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../ser
 import { icon } from '../components/icons.js?v=1.4.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
+import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
 
 let txFilter = 'all';
+const calState = { year: null, month: null, selectedDate: '' };
 
 export function renderFinance(container) {
   const store = getStore();
+  const today = todayISO();
+  if (calState.year === null) {
+    const [y, m] = today.split('-').map(Number);
+    calState.year = y;
+    calState.month = m - 1;
+    calState.selectedDate = today;
+  }
   const currency = store.profile.currency || 'USD';
   const budget = Number(store.profile.monthlyBudget || 2000);
   const txs = [...(store.transactions || [])].sort((a, b) => b.date.localeCompare(a.date));
@@ -120,7 +129,52 @@ export function renderFinance(container) {
         </div>
       `}
     </section>
+
+    <aside class="section-aside" aria-label="Calendario y resumen financiero">
+      <section class="card habit-calendar" id="finance-calendar" aria-label="Calendario financiero">
+        ${(() => {
+          const marked = new Map();
+          txs.forEach(t => {
+            if (!t.date) return;
+            marked.set(t.date, `${t.category || 'Movimiento'}: ${currency} ${Number(t.amount || 0).toFixed(2)}`);
+          });
+          const dayTxs = txs.filter(t => t.date === calState.selectedDate);
+          return buildUnifiedCalendarHTML({
+            year: calState.year,
+            month: calState.month,
+            today,
+            selectedDate: calState.selectedDate,
+            markedDates: marked,
+            footerLabel: 'Días con movimientos',
+            legendLabel: 'con mov.',
+            actionHTML: `
+              <div class="body-cal-day-action">
+                <div>
+                  <div class="mono" style="font-weight:600;">${calState.selectedDate}</div>
+                  <div class="text-muted">${dayTxs.length ? `${dayTxs.length} movimiento(s)` : 'Sin movimientos'}</div>
+                </div>
+              </div>
+            `
+          });
+        })()}
+      </section>
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">${icon('finance')} Resumen</h2>
+          <span class="cyber-tag">FIN</span>
+        </div>
+        <p class="body-summary-text">
+          Balance neto de <strong class="mono">${currency} ${netBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>. Tasa de ahorro del <strong class="mono">${savingsRate}%</strong> y presupuesto mensual utilizado al <strong class="mono">${budgetPct}%</strong>.
+        </p>
+      </section>
+    </aside>
   `;
+
+  bindUnifiedCalendar(container.querySelector('#finance-calendar'), {
+    state: calState,
+    today,
+    onChange: () => renderFinance(container)
+  });
 
   // Filtros
   container.querySelectorAll('[data-tx-filter]').forEach(btn => {

@@ -2,8 +2,10 @@ import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../ser
 import { icon } from '../components/icons.js?v=1.4.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
+import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
 
 let activeFilter = 'Todos';
+const calState = { year: null, month: null, selectedDate: '' };
 
 function calculateDaysBetween(start, end) {
   if (!start) return null;
@@ -15,6 +17,13 @@ function calculateDaysBetween(start, end) {
 
 export function renderReading(container) {
   const store = getStore();
+  const today = todayISO();
+  if (calState.year === null) {
+    const [y, m] = today.split('-').map(Number);
+    calState.year = y;
+    calState.month = m - 1;
+    calState.selectedDate = today;
+  }
   const books = store.books || [];
 
   const readingCount = books.filter(b => b.status === 'Leyendo').length;
@@ -132,7 +141,43 @@ export function renderReading(container) {
         }).join('')}
       </div>
     `}
+
+    <aside class="section-aside" aria-label="Calendario y resumen de lectura">
+      <section class="card habit-calendar" id="reading-calendar" aria-label="Calendario de lectura">
+        ${(() => {
+          const marked = new Map();
+          books.forEach(b => {
+            if (b.startDate) marked.set(b.startDate, `Inicio: ${b.title}`);
+            if (b.endDate) marked.set(b.endDate, `Fin: ${b.title}`);
+          });
+          return buildUnifiedCalendarHTML({
+            year: calState.year,
+            month: calState.month,
+            today,
+            selectedDate: calState.selectedDate,
+            markedDates: marked,
+            footerLabel: 'Hitos del mes',
+            legendLabel: 'inicio/fin'
+          });
+        })()}
+      </section>
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">${icon('reading')} Resumen</h2>
+          <span class="cyber-tag">LIB</span>
+        </div>
+        <p class="body-summary-text">
+          Tienes <strong class="mono">${readingCount}</strong> libro(s) en curso, <strong class="mono">${finishedCount}</strong> terminado(s) y <strong class="mono">${totalPagesRead.toLocaleString('en-US')}</strong> páginas acumuladas en tu biblioteca.
+        </p>
+      </section>
+    </aside>
   `;
+
+  bindUnifiedCalendar(container.querySelector('#reading-calendar'), {
+    state: calState,
+    today,
+    onChange: () => renderReading(container)
+  });
 
   // Filtros
   container.querySelectorAll('[data-filter-status]').forEach(btn => {

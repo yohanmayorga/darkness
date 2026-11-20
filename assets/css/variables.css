@@ -2,47 +2,85 @@
 [data-theme="dark"] {
   color-scheme: dark;
   /* ==========================================
-     Paleta Monocromática / Plata — Modo Oscuro
+     Paleta Cyberpunk Monocromática — Modo Oscuro
      ========================================== */
-  --bg-canvas: #09090B;
-  --bg-surface: #101013;
-  --bg-surface-elevated: #16161A;
-  --bg-surface-hover: #1C1C22;
-  --bg-surface-active: #24242C;
-  --bg-glass: rgba(16, 16, 19, 0.86);
-  --bg-backdrop: rgba(0, 0, 0, 0.72);
+  --bg-canvas: #07070A;
+  --bg-surface: #0B0B0E;
+  --bg-surface-elevated: #121216;
+  --bg-surface-hover: #19191F;
+  --bg-surface-active: #22222A;
+  --bg-glass: rgba(8, 8, 10, 0.90);
+  --bg-backdrop: rgba(0, 0, 0, 0.80);
 
   /* Texto */
   --text-primary: #F4F4F5;
   --text-secondary: #A1A1AA;
-  --text-muted: #63636B;
-  --text-inverse: #09090B;
+  --text-muted: #6E6E78;
+  --text-inverse: #050507;
 
   /* Acentos Plata / Titanio */
   --accent-primary: #E4E4E7;
-  --accent-primary-hover: #FAFAFA;
+  --accent-primary-hover: #FFFFFF;
   --accent-secondary: #3F3F46;
-  --accent-subtle: rgba(228, 228, 231, 0.07);
-  --accent-Glow: rgba(228, 228, 231, 0.14);
+  --accent-subtle: rgba(228, 228, 231, 0.08);
+  --accent-Glow: rgba(228, 228, 231, 0.18);
+
+  /* Acento Cyberpunk Puntual: Amarillo sobre Negro */
+  --cyber-yellow: #F5E642;
+  --cyber-yellow-bg: #000000;
+  --cyber-yellow-border: rgba(245, 230, 66, 0.45);
+  --cyber-clock-fg: #F4F4F5;
+  --cyber-clock-muted: #A1A1AA;
+
+  /* Patrones HUD / Distópicos */
+  --cyber-grid: linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  --cyber-stripe: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.10) 0 4px, transparent 4px 8px);
+  --cyber-stripe-strong: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.24) 0 5px, transparent 5px 10px);
+  --cyber-bracket: rgba(255, 255, 255, 0.34);
 
   /* Bordes y Divisores */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.11);
-  --border-strong: rgba(255, 255, 255, 0.22);
-  --border-focus: #D4D4D8;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.15);
+  --border-strong: rgba(255, 255, 255, 0.30);
+  --border-focus: #E4E4E7;
 
   /* Colores Semánticos Sobrios */
   --status-success: #34D399;
   --status-success-bg: rgba(52, 211, 153, 0.1);
-  --status-warning: #FBBF24;
-  --status-warning-bg: rgba(251, 191, 36, 0.1);
+  --status-warning: #F5E642;
+  --status-warning-bg: #000000;
   --status-danger: #F87171;
-  --status-danger-bg: rgba(248, 113, 113, 0.1);
+  --status-danger-bg: rgba(248, 113, 113, 0.12);
 
   /* Sombras */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.65);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.75);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.9);
+
+  /* Superficies HUD con Contraste Suave (Tarjetas / KPIs / Modales) */
+  --hud-bg: #121217;
+  --hud-bg-header: #0C0C10;
+  --hud-bg-elevated: #181820;
+  --hud-bg-hover: #20202A;
+  --hud-kpi-bg: #0E0E13;
+  --hud-kpi-value: #F4F4F5;
+  --hud-text: #F4F4F5;
+  --hud-text-secondary: #A8A8B3;
+  --hud-text-muted: #70707C;
+  --hud-accent: #E4E4E7;
+  --hud-accent-hover: #FFFFFF;
+  --hud-accent-subtle: rgba(255, 255, 255, 0.07);
+  --hud-border-subtle: rgba(255, 255, 255, 0.08);
+  --hud-border: rgba(255, 255, 255, 0.14);
+  --hud-border-strong: rgba(255, 255, 255, 0.28);
+  --hud-bracket: rgba(255, 255, 255, 0.42);
+  --hud-stripe: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.10) 0 4px, transparent 4px 8px);
+  --hud-stripe-strong: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.22) 0 5px, transparent 5px 10px);
+  --hud-chart-bar: rgba(244, 244, 245, 0.32);
+  --hud-chart-grid: rgba(255, 255, 255, 0.06);
+  --hud-chart-fill: rgba(244, 244, 245, 0.08);
+  --hud-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 
   /* Gráficos y Memento Mori */
   --chart-line: #E4E4E7;
@@ -65,15 +103,15 @@
 [data-theme="light"] {
   color-scheme: light;
   /* ==========================================
-     Paleta Monocromática / Plata — Modo Claro
+     Paleta Cyberpunk Monocromática — Modo Claro (Alto Contraste)
      ========================================== */
-  --bg-canvas: #F5F5F6;
+  --bg-canvas: #E6E6EC;
   --bg-surface: #FFFFFF;
-  --bg-surface-elevated: #FAFAFA;
-  --bg-surface-hover: #F0F0F2;
-  --bg-surface-active: #E4E4E7;
-  --bg-glass: rgba(255, 255, 255, 0.88);
-  --bg-backdrop: rgba(9, 9, 11, 0.45);
+  --bg-surface-elevated: #F4F4F7;
+  --bg-surface-hover: #EAEAEE;
+  --bg-surface-active: #DCDCE2;
+  --bg-glass: rgba(230, 230, 236, 0.90);
+  --bg-backdrop: rgba(9, 9, 11, 0.58);
 
   /* Texto */
   --text-primary: #111113;
@@ -83,16 +121,30 @@
 
   /* Acentos Grafito / Plata Oscuro */
   --accent-primary: #18181B;
-  --accent-primary-hover: #27272A;
+  --accent-primary-hover: #000000;
   --accent-secondary: #D4D4D8;
-  --accent-subtle: rgba(24, 24, 27, 0.05);
-  --accent-Glow: rgba(24, 24, 27, 0.1);
+  --accent-subtle: rgba(24, 24, 27, 0.06);
+  --accent-Glow: rgba(24, 24, 27, 0.12);
+
+  /* Acento Cyberpunk Puntual: Amarillo sobre Negro */
+  --cyber-yellow: #F5E642;
+  --cyber-yellow-bg: #09090B;
+  --cyber-yellow-border: rgba(9, 9, 11, 0.45);
+  --cyber-clock-fg: #F4F4F5;
+  --cyber-clock-muted: #A1A1AA;
+
+  /* Patrones HUD / Distópicos */
+  --cyber-grid: linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+  --cyber-stripe: repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.08) 0 4px, transparent 4px 8px);
+  --cyber-stripe-strong: repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.18) 0 5px, transparent 5px 10px);
+  --cyber-bracket: rgba(0, 0, 0, 0.30);
 
   /* Bordes y Divisores */
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-default: rgba(0, 0, 0, 0.11);
-  --border-strong: rgba(0, 0, 0, 0.22);
-  --border-focus: #3F3F46;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.14);
+  --border-strong: rgba(0, 0, 0, 0.28);
+  --border-focus: #18181B;
 
   /* Colores Semánticos Sobrios */
   --status-success: #059669;
@@ -103,9 +155,33 @@
   --status-danger-bg: rgba(220, 38, 38, 0.08);
 
   /* Sombras */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 14px 34px rgba(0, 0, 0, 0.20);
+
+  /* Superficies HUD con Contraste Suave (Modo Claro Cyberpunk) */
+  --hud-bg: #FAFAFC;
+  --hud-bg-header: #E3E3EA;
+  --hud-bg-elevated: #F1F1F6;
+  --hud-bg-hover: #E6E6EE;
+  --hud-kpi-bg: #F4F4F8;
+  --hud-kpi-value: #111114;
+  --hud-text: #111114;
+  --hud-text-secondary: #4B4B55;
+  --hud-text-muted: #787885;
+  --hud-accent: #18181B;
+  --hud-accent-hover: #000000;
+  --hud-accent-subtle: rgba(24, 24, 27, 0.06);
+  --hud-border-subtle: rgba(0, 0, 0, 0.08);
+  --hud-border: rgba(0, 0, 0, 0.14);
+  --hud-border-strong: rgba(0, 0, 0, 0.28);
+  --hud-bracket: rgba(0, 0, 0, 0.38);
+  --hud-stripe: repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.08) 0 4px, transparent 4px 8px);
+  --hud-stripe-strong: repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.18) 0 5px, transparent 5px 10px);
+  --hud-chart-bar: rgba(24, 24, 27, 0.28);
+  --hud-chart-grid: rgba(0, 0, 0, 0.07);
+  --hud-chart-fill: rgba(24, 24, 27, 0.08);
+  --hud-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
 
   /* Gráficos y Memento Mori */
   --chart-line: #18181B;
@@ -126,7 +202,8 @@
 }
 
 :root {
-  /* Tipografía Minimalista y Elegante */
+  /* Tipografía Cyberpunk Display + Minimalista + Mono */
+  --font-display: 'Chakra Petch', 'Plus Jakarta Sans', sans-serif;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
@@ -145,12 +222,15 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  /* Radios y Transiciones */
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --radius-lg: 11px;
-  --radius-xl: 14px;
+  /* Radios Afilados Cyberpunk y Transiciones */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
   --radius-full: 9999px;
+  --cyber-cut-sm: 6px;
+  --cyber-cut-md: 10px;
+  --cyber-cut-lg: 14px;
   --transition-fast: 140ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }

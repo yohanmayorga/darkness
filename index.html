@@ -16,18 +16,18 @@
 
   <title>Darkness — Personal Growth OS</title>
 
-  <!-- Tipografías Minimalistas y Elegantes: Plus Jakarta Sans & IBM Plex Mono -->
+  <!-- Tipografías Cyberpunk & Minimalistas: Chakra Petch, Plus Jakarta Sans & IBM Plex Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-  <!-- Hojas de Estilo con Cache-Busting v1.2.0 -->
-  <link rel="stylesheet" href="assets/css/variables.css?v=1.4.0" />
-  <link rel="stylesheet" href="assets/css/base.css?v=1.4.0" />
-  <link rel="stylesheet" href="assets/css/layout.css?v=1.4.0" />
-  <link rel="stylesheet" href="assets/css/components.css?v=1.4.0" />
-  <link rel="stylesheet" href="assets/css/journal.css?v=1.4.0" />
-  <link rel="stylesheet" href="assets/css/habits.css?v=1.4.0" />
+  <!-- Hojas de Estilo con Cache-Busting v2.2.0 -->
+  <link rel="stylesheet" href="assets/css/variables.css?v=2.2.0" />
+  <link rel="stylesheet" href="assets/css/base.css?v=2.2.0" />
+  <link rel="stylesheet" href="assets/css/layout.css?v=2.2.0" />
+  <link rel="stylesheet" href="assets/css/components.css?v=2.2.0" />
+  <link rel="stylesheet" href="assets/css/journal.css?v=2.2.0" />
+  <link rel="stylesheet" href="assets/css/habits.css?v=2.2.0" />
 </head>
 <body>
   <div class="app-shell" id="app-shell">
@@ -45,7 +45,25 @@
         </button>
       </div>
 
+      <div class="sidebar-hud-bar" aria-hidden="true">
+        <svg class="cyber-barcode" viewBox="0 0 88 14" width="66" height="11" fill="currentColor">
+          <rect x="0" y="0" width="3" height="14"/><rect x="5" y="0" width="1" height="14"/><rect x="8" y="0" width="4" height="14"/>
+          <rect x="14" y="0" width="2" height="14"/><rect x="18" y="0" width="1" height="14"/><rect x="21" y="0" width="5" height="14"/>
+          <rect x="28" y="0" width="2" height="14"/><rect x="32" y="0" width="3" height="14"/><rect x="37" y="0" width="1" height="14"/>
+          <rect x="40" y="0" width="4" height="14"/><rect x="46" y="0" width="2" height="14"/><rect x="50" y="0" width="3" height="14"/>
+          <rect x="55" y="0" width="1" height="14"/><rect x="58" y="0" width="5" height="14"/><rect x="65" y="0" width="2" height="14"/>
+          <rect x="69" y="0" width="4" height="14"/><rect x="75" y="0" width="1" height="14"/><rect x="78" y="0" width="3" height="14"/>
+          <rect x="83" y="0" width="5" height="14"/>
+        </svg>
+        <span class="cyber-tag">NODE.07</span>
+      </div>
+
       <nav class="sidebar-nav" id="sidebar-nav"></nav>
+
+      <div class="cyber-hazard-divider" aria-hidden="true">
+        <span class="cyber-hazard-block"></span>
+        <span class="cyber-hazard-chevrons">»»»</span>
+      </div>
 
       <div class="sidebar-footer">
         <div class="sidebar-actions">
@@ -94,7 +112,7 @@
     <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Navegación Móvil"></nav>
   </div>
 
-  <!-- Aplicación Modular con Cache-Busting v1.2.0 -->
-  <script type="module" src="js/app.js?v=1.4.0"></script>
+  <!-- Aplicación Modular con Cache-Busting v2.2.0 -->
+  <script type="module" src="js/app.js?v=2.2.0"></script>
 </body>
 </html>

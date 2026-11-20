@@ -1,17 +1,77 @@
 /* ==========================================
-   Tarjetas y Contenedores Minimalistas
+   Tarjetas y Contenedores Cyberpunk HUD (Alto Contraste)
    ========================================== */
+.card,
+.kpi-card,
+.modal-panel,
+.memento-pct-block {
+  --bg-surface: var(--hud-bg);
+  --bg-surface-elevated: var(--hud-bg-elevated);
+  --bg-surface-hover: var(--hud-bg-hover);
+  --bg-surface-active: var(--hud-bg-hover);
+  --text-primary: var(--hud-text);
+  --text-secondary: var(--hud-text-secondary);
+  --text-muted: var(--hud-text-muted);
+  --text-inverse: var(--hud-bg-header);
+  --accent-primary: var(--hud-accent);
+  --accent-primary-hover: var(--hud-accent-hover);
+  --accent-subtle: var(--hud-accent-subtle);
+  --border-subtle: var(--hud-border-subtle);
+  --border-default: var(--hud-border);
+  --border-strong: var(--hud-border-strong);
+  --border-focus: var(--cyber-yellow);
+  --cyber-bracket: var(--hud-bracket);
+  --cyber-stripe: var(--hud-stripe);
+  --cyber-stripe-strong: var(--hud-stripe-strong);
+  --chart-bar: var(--hud-chart-bar);
+  --chart-bar-strong: var(--hud-accent);
+  --chart-grid: var(--hud-chart-grid);
+  --chart-line: var(--hud-accent);
+  --chart-fill: var(--hud-chart-fill);
+  color: var(--hud-text);
+}
+
 .card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  position: relative;
+  background-color: var(--hud-bg);
+  background-image:
+    linear-gradient(var(--hud-bracket), var(--hud-bracket)),
+    linear-gradient(var(--hud-bracket), var(--hud-bracket)),
+    linear-gradient(var(--hud-bracket), var(--hud-bracket)),
+    linear-gradient(var(--hud-bracket), var(--hud-bracket));
+  background-repeat: no-repeat;
+  background-size: 12px 2px, 2px 12px, 12px 2px, 2px 12px;
+  background-position: 0 0, 0 0, 100% 100%, 100% 100%;
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-sm);
   padding: 16px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--hud-shadow);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cyber-cut-md)) 0,
+    100% var(--cyber-cut-md),
+    100% 100%,
+    var(--cyber-cut-md) 100%,
+    0 calc(100% - var(--cyber-cut-md))
+  );
   transition: border-color var(--transition-fast), background-color var(--transition-normal);
 }
 
+.card::before {
+  content: '▪ ▪';
+  position: absolute;
+  top: 5px;
+  right: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: var(--hud-text-muted);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 .card:hover {
-  border-color: var(--border-default);
+  border-color: var(--hud-border-strong);
 }
 
 .card-header {
@@ -19,13 +79,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 12px;
+  margin: -4px -4px 12px;
+  padding: 8px 10px;
+  background-color: var(--hud-bg-header);
+  border-left: 3px solid var(--hud-accent);
+  border-bottom: 1px dashed var(--hud-border);
 }
 
 .card-title {
-  font-size: 0.86rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -37,40 +103,69 @@
   color: var(--text-secondary);
 }
 
-/* KPIs Compactos y Elegantes */
+/* KPIs Tácticos HUD */
 .kpi-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 14px 15px;
+  position: relative;
+  background-color: var(--hud-kpi-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-sm);
+  padding: 16px 15px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  box-shadow: var(--hud-shadow);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cyber-cut-sm)) 0,
+    100% var(--cyber-cut-sm),
+    100% 100%,
+    0 100%
+  );
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 10px;
+  height: 5px;
+  background-image: var(--hud-stripe-strong);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.kpi-card:hover {
+  border-color: var(--hud-border-strong);
 }
 
 .kpi-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--text-secondary);
-  font-size: 0.74rem;
-  font-weight: 400;
-  letter-spacing: 0.01em;
+  color: var(--hud-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .kpi-top svg {
   width: 14px;
   height: 14px;
-  color: var(--text-muted);
+  color: var(--hud-text-muted);
 }
 
 .kpi-value {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
-  font-size: 1.22rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  line-height: 1.2;
+  font-size: 1.48rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--hud-kpi-value);
+  line-height: 1.15;
 }
 
 .kpi-meta {
@@ -83,7 +178,7 @@
 }
 
 /* ==========================================
-   Botones Refinados
+   Botones Tácticos Cyberpunk
    ========================================== */
 .btn {
   display: inline-flex;
@@ -91,13 +186,24 @@
   justify-content: center;
   gap: 7px;
   min-height: 36px;
-  padding: 0 13px;
-  border-radius: var(--radius-md);
-  font-size: 0.8rem;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   transition: all var(--transition-fast);
   border: 1px solid transparent;
   white-space: nowrap;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cyber-cut-sm)) 0,
+    100% var(--cyber-cut-sm),
+    100% 100%,
+    var(--cyber-cut-sm) 100%,
+    0 calc(100% - var(--cyber-cut-sm))
+  );
 }
 
 .btn svg {
@@ -256,9 +362,12 @@
   align-items: center;
   gap: 4px;
   padding: 2px 7px;
-  border-radius: var(--radius-full);
-  font-size: 0.68rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
   font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   background-color: var(--bg-surface-active);
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
@@ -276,8 +385,9 @@
 }
 
 .badge-warning {
-  background-color: var(--status-warning-bg);
-  color: var(--status-warning);
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border-color: var(--cyber-yellow-border);
 }
 
 .badge-danger {
@@ -297,9 +407,12 @@
 .filter-tab {
   min-height: 30px;
   padding: 0 12px;
-  border-radius: var(--radius-full);
-  font-size: 0.76rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.71rem;
   font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-secondary);
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -317,23 +430,32 @@
   color: var(--text-inverse);
   border-color: var(--accent-primary);
   font-weight: 500;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
 }
 
 /* ==========================================
-   Barras de Progreso
+   Barras de Progreso Segmentadas (HUD)
    ========================================== */
 .progress-track {
   width: 100%;
-  height: 4px;
+  height: 8px;
   background-color: var(--bg-surface-active);
-  border-radius: var(--radius-full);
+  background-image: var(--cyber-stripe);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
   overflow: hidden;
+  padding: 1px;
 }
 
 .progress-fill {
   height: 100%;
   background-color: var(--accent-primary);
-  border-radius: var(--radius-full);
+  background-image: repeating-linear-gradient(
+    -55deg,
+    transparent 0 5px,
+    var(--bg-canvas) 5px 8px
+  );
+  border-radius: 0;
   transition: width var(--transition-normal);
 }
 
@@ -535,15 +657,35 @@
 }
 
 .modal-panel {
+  position: relative;
   width: 100%;
   max-width: 490px;
   max-height: 90dvh;
   overflow-y: auto;
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   padding: 20px;
   box-shadow: var(--shadow-lg);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cyber-cut-lg)) 0,
+    100% var(--cyber-cut-lg),
+    100% 100%,
+    var(--cyber-cut-lg) 100%,
+    0 calc(100% - var(--cyber-cut-lg))
+  );
+}
+
+.modal-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 16px;
+  height: 3px;
+  background-image: var(--cyber-stripe-strong);
+  pointer-events: none;
 }
 
 .modal-header {
@@ -552,12 +694,15 @@
   justify-content: space-between;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px dashed var(--border-default);
 }
 
 .modal-title {
-  font-size: 0.96rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
   font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .modal-footer {
@@ -591,18 +736,21 @@
 }
 
 .toast {
-  background-color: var(--bg-surface-elevated);
-  color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  padding: 9px 13px;
-  border-radius: var(--radius-md);
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border: 1px solid var(--cyber-yellow-border);
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow-md);
-  font-size: 0.78rem;
-  font-weight: 400;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 7px 100%, 0 calc(100% - 7px));
 }
 
 .empty-state {
@@ -627,4 +775,175 @@
   width: 100%;
   height: 100%;
   overflow: visible;
+}
+
+/* ==========================================
+   Elementos Gráficos Cyberpunk / HUD
+   ========================================== */
+.cyber-hud-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 12px;
+  margin-bottom: 16px;
+  background-color: var(--hud-bg-header);
+  border: 1px solid var(--hud-border);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hud-text-secondary);
+  box-shadow: var(--hud-shadow);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.cyber-hud-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cyber-hud-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cyber-hazard-bar {
+  flex: 1;
+  min-width: 36px;
+  height: 8px;
+  background-image: var(--cyber-stripe-strong);
+  border: 1px solid var(--border-subtle);
+}
+
+.cyber-barcode {
+  color: var(--text-secondary);
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.cyber-crosses {
+  letter-spacing: 0.2em;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.cyber-reticle-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-reticle-bg {
+  position: absolute;
+  right: -18px;
+  bottom: -18px;
+  width: 84px;
+  height: 84px;
+  color: var(--text-primary);
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .cyber-hud-strip .cyber-hud-hide-sm {
+    display: none;
+  }
+}
+
+/* ==========================================
+   Barra de Relojes Cyberpunk (Dashboard)
+   ========================================== */
+.cyber-clock-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(195px, auto) repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.cyber-clock-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 6px;
+  background-color: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  border-radius: var(--radius-sm);
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+  min-width: 0;
+}
+
+.cyber-clock-city {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hud-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cyber-clock-time {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--hud-text);
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.cyber-clock-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 14px;
+  background-color: var(--cyber-yellow-bg);
+  border: 1px solid var(--cyber-yellow-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--hud-shadow);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  text-align: center;
+  min-width: 0;
+}
+
+.cyber-clock-main-date {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cyber-clock-fg);
+  white-space: nowrap;
+}
+
+.cyber-clock-main-time {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.32rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--cyber-yellow);
+  line-height: 1.05;
+}
+
+@media (max-width: 1120px) {
+  .cyber-clock-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cyber-clock-main {
+    grid-column: 1 / -1;
+    order: -1;
+  }
 }

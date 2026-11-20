@@ -72,10 +72,9 @@ export function renderHabits(container) {
       <section class="card habit-day">${buildDayPanel(habits, today)}</section>
       <aside class="habit-aside">
         <section class="card habit-calendar" aria-label="Calendario de cumplimiento">${buildCalendar(habits, today)}</section>
+        <section class="card habit-manage">${buildManager(habits, today)}</section>
       </aside>
     </div>
-
-    <section class="card habit-manage">${buildManager(habits, today)}</section>
   `;
 
   bindEvents(container, today);
@@ -226,10 +225,6 @@ function buildDayPanel(habits, today) {
   const off = habits.filter(h => !isScheduled(h, iso));
   const pct = Math.round((stats.pct || 0) * 100);
 
-  const groups = TIME_ORDER
-    .map(key => ({ key, items: scheduled.filter(h => h.timeOfDay === key) }))
-    .filter(g => g.items.length);
-
   return `
     <div class="hday-head">
       <button type="button" class="btn-icon" data-day-nav="-1" aria-label="Día anterior">${icon('chevronLeft')}</button>
@@ -256,25 +251,21 @@ function buildDayPanel(habits, today) {
       </div>
     </div>
 
-    ${groups.map(g => `
-      <div class="hday-group">
-        <div class="hday-group-title mono">${TIME_OF_DAY[g.key]}</div>
-        ${g.items.map(h => {
-          const done = isDone(h, iso);
-          const streak = habitStreak(h, today);
-          const meta = [h.target, `Racha ${streak}d`].filter(Boolean).map(esc).join(' · ');
-          return `
-            <button type="button" class="hday-item ${done ? 'done' : ''}" data-toggle-habit="${h.id}" aria-pressed="${done}">
-              <span class="habit-check-btn ${done ? 'done' : ''}" aria-hidden="true">${icon('check')}</span>
-              <span class="hday-item-body">
-                <span class="hday-item-name">${esc(h.name)}</span>
-                <span class="hday-item-meta">${meta}</span>
-              </span>
-              <span class="badge">${esc(h.category)}</span>
-            </button>`;
-        }).join('')}
-      </div>
-    `).join('')}
+    <div class="hday-grid">
+      ${scheduled.map(h => {
+        const done = isDone(h, iso);
+        const streak = habitStreak(h, today);
+        const meta = [h.target, `Racha ${streak}d`].filter(Boolean).map(esc).join(' · ');
+        return `
+          <button type="button" class="hday-item ${done ? 'done' : ''}" data-toggle-habit="${h.id}" aria-pressed="${done}">
+            <span class="habit-check-btn ${done ? 'done' : ''}" aria-hidden="true">${icon('check')}</span>
+            <span class="hday-item-body">
+              <span class="hday-item-name">${esc(h.name)}</span>
+              <span class="hday-item-meta">${meta}</span>
+            </span>
+          </button>`;
+      }).join('')}
+    </div>
 
     ${off.length ? `
       <details class="hday-off">
@@ -354,9 +345,6 @@ function habitStatus(h, today) {
 }
 
 function buildManager(habits, today) {
-  const sorted = [...habits].sort((a, b) =>
-    TIME_ORDER.indexOf(a.timeOfDay) - TIME_ORDER.indexOf(b.timeOfDay));
-
   return `
     <div class="card-header">
       <h2 class="card-title">${icon('settings')} Gestionar hábitos</h2>
@@ -364,18 +352,14 @@ function buildManager(habits, today) {
     </div>
     ${!habits.length ? `<div class="empty-state">No tienes hábitos todavía.</div>` : `
       <div class="hman-list">
-        ${sorted.map(h => {
+        ${habits.map(h => {
           const st = habitStatus(h, today);
           const r30 = habitRate(h, addDays(today, -29), today);
           return `
             <div class="hman-row">
               <div class="hman-main">
                 <div class="hman-name">${esc(h.name)} <span class="badge ${st.cls}">${st.label}</span></div>
-                <div class="hman-sub">
-                  <span>${esc(h.category)}</span>
-                  <span>${TIME_OF_DAY[h.timeOfDay]}</span>
-                  ${h.target ? `<span>${esc(h.target)}</span>` : ''}
-                </div>
+                ${h.target ? `<div class="hman-sub"><span>${esc(h.target)}</span></div>` : ''}
               </div>
               <div class="hman-days" aria-label="${scheduleLabel(h.days)}" title="${scheduleLabel(h.days)}">
                 ${WEEK_ORDER.map(d => `<span class="${h.days.includes(d) ? 'on' : ''}">${DAY_LETTER[d]}</span>`).join('')}
@@ -405,10 +389,9 @@ function buildManager(habits, today) {
 function openHabitForm(container, existing = null) {
   const today = todayISO();
   const h = existing || {
-    name: '', category: 'Salud', timeOfDay: 'anytime', target: '',
+    name: '', category: 'General', timeOfDay: 'anytime', target: '',
     days: [...ALL_DAYS], startDate: today, endDate: ''
   };
-  const categories = HABIT_CATEGORIES.includes(h.category) ? HABIT_CATEGORIES : [...HABIT_CATEGORIES, h.category];
   const presets = [
     { key: 'all', label: 'Todos los días', days: ALL_DAYS },
     { key: 'work', label: 'Lunes a viernes', days: WORK_DAYS },
@@ -422,20 +405,6 @@ function openHabitForm(container, existing = null) {
         <div class="form-group">
           <label class="form-label" for="hf-name">Nombre del hábito</label>
           <input type="text" id="hf-name" name="name" class="form-input" placeholder="Ej. Meditación 15 min" value="${esc(h.name)}" maxlength="80" required />
-        </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label" for="hf-category">Categoría</label>
-            <select id="hf-category" name="category" class="form-select">
-              ${categories.map(c => `<option value="${esc(c)}" ${c === h.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="hf-time">Momento del día</label>
-            <select id="hf-time" name="timeOfDay" class="form-select">
-              ${TIME_ORDER.map(k => `<option value="${k}" ${k === h.timeOfDay ? 'selected' : ''}>${TIME_OF_DAY[k]}</option>`).join('')}
-            </select>
-          </div>
         </div>
         <div class="form-group">
           <label class="form-label" for="hf-target">Meta o detalle (opcional)</label>
@@ -525,8 +494,8 @@ function openHabitForm(container, existing = null) {
 
         const data = {
           name,
-          category: String(fd.get('category')),
-          timeOfDay: String(fd.get('timeOfDay')),
+          category: existing?.category || 'General',
+          timeOfDay: existing?.timeOfDay || 'anytime',
           target: String(fd.get('target') || '').trim(),
           days, startDate, endDate
         };

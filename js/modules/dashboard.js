@@ -1,9 +1,60 @@
 import { getStore, saveStore, todayISO } from '../services/db.js?v=1.4.0';
 import { icon } from '../components/icons.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
-import { renderMementoSidebar } from '../components/memento.js?v=1.4.0';
+import { renderMementoSidebar } from '../components/memento.js?v=1.6.0';
 import { escapeHTML, stripHTML } from '../utils/text.js?v=1.4.0';
 import { isScheduled, isDone, habitStreak } from '../utils/habits.js?v=1.4.0';
+
+const WORLD_CLOCKS = [
+  { id: 'nyc', label: 'Nueva York', tz: 'America/New_York' },
+  { id: 'arg', label: 'Argentina', tz: 'America/Argentina/Buenos_Aires' },
+  { id: 'mad', label: 'Madrid', tz: 'Europe/Madrid' },
+  { id: 'sel', label: 'Seúl', tz: 'Asia/Seoul' },
+  { id: 'tyo', label: 'Tokyo', tz: 'Asia/Tokyo' },
+  { id: 'chn', label: 'China', tz: 'Asia/Shanghai' }
+];
+
+let clockInterval = null;
+
+function formatWorldTime(now, tz) {
+  return new Intl.DateTimeFormat('es-ES', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).format(now);
+}
+
+function updateClockBar() {
+  const bar = document.getElementById('dash-clock-bar');
+  if (!bar) {
+    if (clockInterval) {
+      clearInterval(clockInterval);
+      clockInterval = null;
+    }
+    return;
+  }
+
+  const now = new Date();
+  const dayStr = new Intl.DateTimeFormat('es-ES', { weekday: 'short' }).format(now).replace('.', '');
+  const dateStr = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }).format(now).replace('.', '');
+  const timeStr = new Intl.DateTimeFormat('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(now);
+
+  const dateEl = bar.querySelector('[data-clock-date]');
+  const timeEl = bar.querySelector('[data-clock-time]');
+  if (dateEl) dateEl.textContent = `${dayStr} · ${dateStr}`;
+  if (timeEl) timeEl.textContent = timeStr;
+
+  WORLD_CLOCKS.forEach(c => {
+    const el = bar.querySelector(`[data-tz="${c.id}"]`);
+    if (el) el.textContent = formatWorldTime(now, c.tz);
+  });
+}
 
 export function renderDashboard(container) {
   const store = getStore();
@@ -44,7 +95,23 @@ export function renderDashboard(container) {
   // 5. Última entrada del diario
   const latestJournal = [...store.journalEntries].sort((a, b) => b.date.localeCompare(a.date))[0];
 
+  const renderClockNode = c => `
+    <div class="cyber-clock-node" title="${c.label}">
+      <span class="cyber-clock-city">${c.label}</span>
+      <span class="cyber-clock-time" data-tz="${c.id}">--:--</span>
+    </div>
+  `;
+
   container.innerHTML = `
+    <section class="cyber-clock-bar" id="dash-clock-bar" aria-label="Fecha, hora local y relojes mundiales">
+      ${WORLD_CLOCKS.slice(0, 3).map(renderClockNode).join('')}
+      <div class="cyber-clock-main">
+        <span class="cyber-clock-main-date" data-clock-date>--- · -- --- ----</span>
+        <span class="cyber-clock-main-time" data-clock-time>--:--:--</span>
+      </div>
+      ${WORLD_CLOCKS.slice(3, 6).map(renderClockNode).join('')}
+    </section>
+
     <header class="page-header">
       <div class="page-title-group">
         <span class="page-eyebrow">${today} · PANEL CENTRAL</span>
@@ -57,8 +124,36 @@ export function renderDashboard(container) {
       </div>
     </header>
 
+    <section class="cyber-hud-strip" aria-hidden="true">
+      <div class="cyber-hud-left">
+        <span class="cyber-tag">SYS // ACTIVE</span>
+        <svg class="cyber-barcode" viewBox="0 0 88 12" width="62" height="10" fill="currentColor">
+          <rect x="0" y="0" width="3" height="12"/><rect x="5" y="0" width="1" height="12"/><rect x="8" y="0" width="4" height="12"/>
+          <rect x="14" y="0" width="2" height="12"/><rect x="18" y="0" width="1" height="12"/><rect x="21" y="0" width="5" height="12"/>
+          <rect x="28" y="0" width="2" height="12"/><rect x="32" y="0" width="3" height="12"/><rect x="37" y="0" width="1" height="12"/>
+          <rect x="40" y="0" width="4" height="12"/><rect x="46" y="0" width="2" height="12"/><rect x="50" y="0" width="3" height="12"/>
+          <rect x="55" y="0" width="1" height="12"/><rect x="58" y="0" width="5" height="12"/><rect x="65" y="0" width="2" height="12"/>
+          <rect x="69" y="0" width="4" height="12"/><rect x="75" y="0" width="1" height="12"/><rect x="78" y="0" width="3" height="12"/>
+          <rect x="83" y="0" width="5" height="12"/>
+        </svg>
+        <span class="cyber-hud-hide-sm">&gt;&gt; SURVIVAL_INDEX // SEC_01</span>
+      </div>
+      <div class="cyber-hazard-bar cyber-hud-hide-sm"></div>
+      <div class="cyber-hud-right">
+        <span class="cyber-crosses">✕ ✕</span>
+        <span>»»»</span>
+      </div>
+    </section>
+
     <section class="grid-kpi">
-      <div class="kpi-card">
+      <div class="kpi-card cyber-reticle-wrap">
+        <svg class="cyber-reticle-bg" viewBox="0 0 100 100" fill="none" stroke="currentColor" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" stroke-width="1.5" stroke-dasharray="18 6 8 6"/>
+          <circle cx="50" cy="50" r="28" stroke-width="2" stroke-dasharray="28 10"/>
+          <circle cx="50" cy="50" r="12" stroke-width="1.5"/>
+          <line x1="50" y1="0" x2="50" y2="100" stroke-width="1"/>
+          <line x1="0" y1="50" x2="100" y2="50" stroke-width="1"/>
+        </svg>
         <div class="kpi-top">
           <span>Hábitos de Hoy</span>
           ${icon('habits')}
@@ -205,4 +300,8 @@ export function renderDashboard(container) {
       renderDashboard(container);
     });
   });
+
+  if (clockInterval) clearInterval(clockInterval);
+  updateClockBar();
+  clockInterval = setInterval(updateClockBar, 1000);
 }

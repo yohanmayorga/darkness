@@ -192,18 +192,30 @@
   font-weight: 400;
 }
 
-/* ---------- Layout día + calendario ---------- */
+/* ---------- Layout día + panel derecho fijo (estilo Memento Mori) ---------- */
 .habit-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
-  gap: 16px;
-  align-items: start;
+  display: block;
   margin-bottom: 18px;
 }
 
 .habit-aside {
-  position: sticky;
-  top: 16px;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--habits-sidebar-width, 330px);
+  background-color: var(--bg-surface);
+  border-left: 1px solid var(--border-subtle);
+  padding: 16px 14px;
+  overflow-y: auto;
+  z-index: 38;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.habit-aside > .card {
+  flex-shrink: 0;
 }
 
 /* ---------- Panel del día ---------- */
@@ -296,14 +308,20 @@
   margin-bottom: 6px;
 }
 
+.hday-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
 .hday-item {
   width: 100%;
-  min-height: 52px;
+  min-height: 54px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  margin-bottom: 6px;
+  gap: 10px;
+  padding: 9px 11px;
+  margin-bottom: 0;
   text-align: left;
   border-radius: var(--radius-md);
   background-color: var(--bg-surface-elevated);
@@ -494,12 +512,22 @@
 
 .hman-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "main actions"
+    "days stats"
+    "range range";
   align-items: center;
-  gap: 16px;
-  padding: 11px 4px;
+  gap: 8px 10px;
+  padding: 10px 2px;
   border-bottom: 1px solid var(--border-subtle);
 }
+
+.hman-main { grid-area: main; min-width: 0; }
+.hman-days { grid-area: days; }
+.hman-range { grid-area: range; }
+.hman-stats { grid-area: stats; text-align: right; }
+.hman-actions { grid-area: actions; }
 
 .hman-row:last-child {
   border-bottom: none;
@@ -651,16 +679,21 @@
   .hman-actions { grid-area: actions; }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 768px) {
   .habit-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
   .habit-aside {
     position: static;
+    width: 100%;
+    background: transparent;
+    border-left: none;
+    padding: 0;
+    overflow-y: visible;
+    z-index: auto;
   }
-}
-
-@media (max-width: 768px) {
   .habit-chart-card .card-header {
     flex-wrap: wrap;
   }

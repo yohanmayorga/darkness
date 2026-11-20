@@ -146,7 +146,10 @@ export function renderMementoSidebar() {
 
   aside.innerHTML = `
     <div class="memento-top">
-      <span class="memento-title">MEMENTO MORI</span>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span class="memento-title">MEMENTO MORI</span>
+        <span class="cyber-tag">GRID</span>
+      </div>
       <div class="memento-top-actions">
         <button type="button" class="btn-icon" id="btn-memento-config" title="Configurar Memento Mori" aria-label="Configurar Memento Mori" style="min-width:28px;min-height:28px;">
           ${icon('settings')}
@@ -169,6 +172,11 @@ export function renderMementoSidebar() {
         <span>Vividos: <strong>${stats.completedUnits.toLocaleString('en-US')}</strong> ${stats.unitLabel}</span>
         <span>Faltan: <strong>${stats.remainingUnits.toLocaleString('en-US')}</strong></span>
       </div>
+    </div>
+
+    <div class="cyber-hazard-divider" style="margin:0 0 10px;" aria-hidden="true">
+      <span class="cyber-hazard-block"></span>
+      <span class="cyber-hazard-chevrons">✕ ✕</span>
     </div>
 
     <div class="memento-unit-bar" role="tablist" aria-label="Escala de tiempo">

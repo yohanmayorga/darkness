@@ -18,6 +18,7 @@ const FINANCE_CATEGORIES = [
   'Transporte',
   'Teléfono',
   'Suscripciones',
+  'Pago de deudas',
   'Ropa y calzado',
   'Salidas',
   'Regalos',

@@ -1,4 +1,4 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.3.0';
+import { initRouter, getActiveRoute } from './router.js?v=6.4.0';
 import { getStore, isFirebaseConfigured, pullFromFirebase } from './services/db.js?v=6.1.0';
 import { handleGoogleRedirectResult } from './services/auth.js?v=6.2.0';
 import { icon } from './components/icons.js?v=3.3.0';

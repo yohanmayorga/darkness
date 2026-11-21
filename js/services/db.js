@@ -1,11 +1,11 @@
-import { SUPABASE_CONFIG } from '../config.example.js?v=5.7.0';
-import { createDefaultHabits, normalizeHabit } from '../utils/habits.js?v=3.3.0';
+import { FIREBASE_CONFIG } from '../config.example.js?v=6.0.0';
+import { createDefaultHabits, normalizeHabit } from '../utils/habits.js?v=4.9.0';
 
 const STORAGE_KEY = 'darkness_store_v1';
 const HABITS_SCHEMA = 2;
-const SUPA_CFG_KEY = 'darkness_supabase_cfg';
+const FB_CFG_KEY = 'darkness_firebase_cfg';
 
-let supabaseClient = null;
+let firebaseBundle = null;
 
 /**
  * Obtiene la fecha actual en formato YYYY-MM-DD local
@@ -294,113 +294,123 @@ export function saveStore(store) {
 }
 
 /**
- * Configuración de Supabase
+ * Configuración de Google Firebase (Firestore + Auth)
  */
-function normalizeSupabaseUrl(raw) {
-  const trimmed = String(raw || '').trim();
-  if (!trimmed) return '';
+export function getFirebaseConfig() {
   try {
-    return new URL(trimmed).origin;
-  } catch {
-    return trimmed.replace(/\/+$/, '');
-  }
-}
-
-export function getSupabaseConfig() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(SUPA_CFG_KEY) || '{}');
-    return {
-      url: normalizeSupabaseUrl(saved.url || SUPABASE_CONFIG.url || ''),
-      anonKey: String(saved.anonKey || SUPABASE_CONFIG.anonKey || '').trim()
+    const saved = JSON.parse(localStorage.getItem(FB_CFG_KEY) || '{}');
+    const merged = {
+      apiKey: String(saved.apiKey || FIREBASE_CONFIG.apiKey || '').trim(),
+      authDomain: String(saved.authDomain || FIREBASE_CONFIG.authDomain || '').trim(),
+      projectId: String(saved.projectId || FIREBASE_CONFIG.projectId || '').trim(),
+      storageBucket: String(saved.storageBucket || FIREBASE_CONFIG.storageBucket || '').trim(),
+      messagingSenderId: String(saved.messagingSenderId || FIREBASE_CONFIG.messagingSenderId || '').trim(),
+      appId: String(saved.appId || FIREBASE_CONFIG.appId || '').trim()
     };
+    return merged;
   } catch {
-    return { url: '', anonKey: '' };
+    return { ...FIREBASE_CONFIG };
   }
 }
 
-export function setSupabaseConfig(url, anonKey) {
-  localStorage.setItem(SUPA_CFG_KEY, JSON.stringify({
-    url: normalizeSupabaseUrl(url),
-    anonKey: anonKey.trim()
+export function setFirebaseConfig(cfg) {
+  localStorage.setItem(FB_CFG_KEY, JSON.stringify({
+    apiKey: String(cfg.apiKey || '').trim(),
+    authDomain: String(cfg.authDomain || '').trim(),
+    projectId: String(cfg.projectId || '').trim(),
+    storageBucket: String(cfg.storageBucket || '').trim(),
+    messagingSenderId: String(cfg.messagingSenderId || '').trim(),
+    appId: String(cfg.appId || '').trim()
   }));
-  supabaseClient = null;
+  firebaseBundle = null;
 }
 
-export function isSupabaseConfigured() {
-  const cfg = getSupabaseConfig();
-  return Boolean(cfg.url && cfg.anonKey);
+export function isFirebaseConfigured() {
+  const cfg = getFirebaseConfig();
+  return Boolean(cfg.apiKey && cfg.projectId && cfg.appId);
 }
+
+export const isSupabaseConfigured = isFirebaseConfigured;
 
 /**
- * Inicializa dinámicamente el cliente de Supabase vía ESM CDN cuando está configurado
+ * Inicializa dinámicamente Firebase (App, Auth, Firestore) vía ESM CDN oficial de Google
  */
-export async function getSupabaseClient() {
-  if (!isSupabaseConfigured()) return null;
-  if (supabaseClient) return supabaseClient;
+export async function getFirebaseClient() {
+  if (!isFirebaseConfigured()) return null;
+  if (firebaseBundle) return firebaseBundle;
 
-  const { url, anonKey } = getSupabaseConfig();
+  const cfg = getFirebaseConfig();
   try {
-    const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-    supabaseClient = createClient(url, anonKey);
-    return supabaseClient;
+    const [appMod, authMod, fsMod] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
+      import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
+    ]);
+    const existing = appMod.getApps().find(a => a.name === 'darkness');
+    const app = existing || appMod.initializeApp(cfg, 'darkness');
+    const auth = authMod.getAuth(app);
+    const db = fsMod.getFirestore(app);
+    firebaseBundle = { app, auth, db, authMod, fsMod };
+    return firebaseBundle;
   } catch (err) {
-    console.warn('No se pudo cargar el SDK de Supabase:', err);
+    console.warn('No se pudo cargar el SDK de Firebase:', err);
     return null;
   }
 }
 
 /**
- * Sincroniza un snapshot JSON del usuario autenticado en Supabase (tabla `user_snapshots`)
+ * Sincroniza un snapshot JSON del usuario autenticado en Cloud Firestore (colección `users/{uid}`)
  */
-export async function syncToSupabaseIfConfigured(storeData = null) {
-  const client = await getSupabaseClient();
-  if (!client) return { ok: false, reason: 'not_configured' };
+export async function syncToFirebaseIfConfigured(storeData = null) {
+  const fb = await getFirebaseClient();
+  if (!fb) return { ok: false, reason: 'not_configured' };
 
-  const { data: sessionData } = await client.auth.getSession();
-  const user = sessionData?.session?.user;
+  await fb.auth.authStateReady();
+  const user = fb.auth.currentUser;
   if (!user) return { ok: false, reason: 'not_authenticated' };
 
-  const payload = storeData || getStore();
-  const { error } = await client
-    .from('user_snapshots')
-    .upsert({
-      user_id: user.id,
+  const payload = JSON.parse(JSON.stringify(storeData || getStore()));
+  try {
+    const ref = fb.fsMod.doc(fb.db, 'users', user.uid);
+    await fb.fsMod.setDoc(ref, {
       payload,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id' });
-
-  if (error) {
-    console.warn('Error sincronizando con Supabase:', error.message);
-    return { ok: false, reason: error.message };
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    return { ok: true };
+  } catch (err) {
+    console.warn('Error sincronizando con Firebase:', err?.message || err);
+    return { ok: false, reason: err?.message || 'sync_error' };
   }
-  return { ok: true };
 }
+
+export const syncToSupabaseIfConfigured = syncToFirebaseIfConfigured;
 
 /**
- * Descarga el snapshot desde Supabase y actualiza el almacenamiento local
+ * Descarga el snapshot desde Cloud Firestore y actualiza el almacenamiento local
  */
-export async function pullFromSupabase() {
-  const client = await getSupabaseClient();
-  if (!client) return { ok: false, reason: 'not_configured' };
+export async function pullFromFirebase() {
+  const fb = await getFirebaseClient();
+  if (!fb) return { ok: false, reason: 'not_configured' };
 
-  const { data: sessionData } = await client.auth.getSession();
-  const user = sessionData?.session?.user;
+  await fb.auth.authStateReady();
+  const user = fb.auth.currentUser;
   if (!user) return { ok: false, reason: 'not_authenticated' };
 
-  const { data, error } = await client
-    .from('user_snapshots')
-    .select('payload, updated_at')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (error) return { ok: false, reason: error.message };
-  if (data && data.payload) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.payload));
-    window.dispatchEvent(new CustomEvent('darkness:data-updated'));
-    return { ok: true, updatedAt: data.updated_at };
+  try {
+    const ref = fb.fsMod.doc(fb.db, 'users', user.uid);
+    const snap = await fb.fsMod.getDoc(ref);
+    if (snap.exists() && snap.data()?.payload) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snap.data().payload));
+      window.dispatchEvent(new CustomEvent('darkness:data-updated'));
+      return { ok: true, updatedAt: snap.data().updatedAt };
+    }
+    return { ok: false, reason: 'empty' };
+  } catch (err) {
+    return { ok: false, reason: err?.message || 'pull_error' };
   }
-  return { ok: false, reason: 'empty' };
 }
+
+export const pullFromSupabase = pullFromFirebase;
 
 /**
  * Convierte un archivo o imagen subida en DataURL comprimido (redimensionado automático para cuidar memoria)

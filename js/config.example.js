@@ -1,9 +1,13 @@
 /**
- * Plantilla de Configuración de Darkness
- * Copia este archivo como `js/config.local.js` (está en .gitignore)
- * o configura tus credenciales directamente desde la vista #/settings
+ * Configuración de Google Firebase (Firestore + Auth) para Darkness
+ * Nota: Las claves de Firebase Web son públicas de cliente; la seguridad
+ * reside en las Reglas de Firestore (request.auth.uid == userId).
  */
-export const SUPABASE_CONFIG = {
-  url: '',      // Ej: 'https://xyzcompany.supabase.co'
-  anonKey: ''   // Ej: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+export const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyAYmzDEmx_b9PYHKytyaqDWMnqF5MiDbCk',
+  authDomain: 'darknessweb.firebaseapp.com',
+  projectId: 'darknessweb',
+  storageBucket: 'darknessweb.firebasestorage.app',
+  messagingSenderId: '101652151120',
+  appId: '1:101652151120:web:00603944d4dcb94f6ee37d'
 };

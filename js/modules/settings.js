@@ -3,13 +3,13 @@ import {
   saveStore,
   generateId,
   todayISO,
-  getSupabaseConfig,
-  setSupabaseConfig,
-  isSupabaseConfigured,
-  syncToSupabaseIfConfigured,
-  pullFromSupabase
-} from '../services/db.js?v=5.7.0';
-import { getCurrentSession, loginUser, registerCloudUser, logoutUser } from '../services/auth.js?v=3.9.0';
+  getFirebaseConfig,
+  setFirebaseConfig,
+  isFirebaseConfigured,
+  syncToFirebaseIfConfigured,
+  pullFromFirebase
+} from '../services/db.js?v=6.0.0';
+import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser } from '../services/auth.js?v=6.0.0';
 import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
@@ -27,7 +27,7 @@ export function renderSettings(container) {
     calState.selectedDate = today;
   }
   const session = getCurrentSession();
-  const supaCfg = getSupabaseConfig();
+  const fbCfg = getFirebaseConfig();
   const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
 
   container.innerHTML = `
@@ -35,7 +35,7 @@ export function renderSettings(container) {
       <div class="page-title-group">
         <span class="page-eyebrow">SISTEMA & NUBE</span>
         <h1 class="page-title">Ajustes y Sincronización</h1>
-        <p class="page-subtitle">Personaliza la apariencia monocromática, tu cuenta de usuario, conexión a Supabase y copias de seguridad.</p>
+        <p class="page-subtitle">Personaliza la apariencia monocromática, tu cuenta de usuario, conexión a Google Firebase y copias de seguridad.</p>
       </div>
     </header>
 
@@ -93,29 +93,47 @@ export function renderSettings(container) {
         </form>
       </section>
 
-      <!-- Base de Datos en la Nube (Supabase) y Usuario -->
+      <!-- Base de Datos en la Nube (Google Firebase) y Usuario -->
       <section class="card">
         <div class="card-header">
-          <h2 class="card-title">${icon('cloud')} Base de Datos Supabase & Sesión</h2>
-          <span class="badge ${isSupabaseConfigured() ? 'badge-success' : 'badge-silver'}">
-            ${isSupabaseConfigured() ? 'Supabase Configurado' : 'Modo Local Activo'}
+          <h2 class="card-title">${icon('cloud')} Google Firebase (Firestore & Auth)</h2>
+          <span class="badge ${isFirebaseConfigured() ? 'badge-success' : 'badge-silver'}">
+            ${isFirebaseConfigured() ? 'Firebase Conectado' : 'Modo Local Activo'}
           </span>
         </div>
 
-        <form id="form-supabase">
-          <div class="form-group">
-            <label class="form-label">Supabase Project URL</label>
-            <input type="url" name="url" class="form-input mono" placeholder="https://tu-proyecto.supabase.co" value="${supaCfg.url}" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Supabase Anon Public Key</label>
-            <input type="password" name="anonKey" class="form-input mono" placeholder="eyJhbGciOiJIUzI1NiIs..." value="${supaCfg.anonKey}" />
-          </div>
-          <button type="submit" class="btn btn-secondary" style="width:100%;">Guardar Conexión Supabase</button>
-        </form>
+        <details style="margin-bottom:14px;">
+          <summary class="text-secondary" style="cursor:pointer;font-size:0.8rem;">
+            Proyecto conectado: <strong class="mono">${fbCfg.projectId || 'Sin configurar'}</strong> (clic para editar claves)
+          </summary>
+          <form id="form-firebase" style="margin-top:10px;">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Project ID</label>
+                <input type="text" name="projectId" class="form-input mono" value="${fbCfg.projectId}" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input type="password" name="apiKey" class="form-input mono" value="${fbCfg.apiKey}" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Auth Domain</label>
+                <input type="text" name="authDomain" class="form-input mono" value="${fbCfg.authDomain}" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">App ID</label>
+                <input type="text" name="appId" class="form-input mono" value="${fbCfg.appId}" />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm" style="width:100%;">Guardar Configuración Firebase</button>
+          </form>
+        </details>
 
-        <div style="border-top:1px solid var(--border-subtle);margin:18px 0;padding-top:16px;">
-          <h3 style="font-size:0.9rem;margin-bottom:10px;">Autenticación de Usuario (${session.mode === 'cloud' ? 'Conectado a Nube' : 'Sesión Local'})</h3>
+        <div>
+          <h3 style="font-size:0.9rem;margin-bottom:10px;">Autenticación (${session.mode === 'cloud' ? 'Conectado a Firebase' : 'Sesión Local'})</h3>
+          <button type="button" class="btn btn-secondary" id="btn-google-login" style="width:100%;margin-bottom:12px;">
+            Entrar con Google (1 clic)
+          </button>
           <form id="form-auth">
             <div class="form-grid">
               <div class="form-group">
@@ -123,13 +141,13 @@ export function renderSettings(container) {
                 <input type="email" name="authEmail" class="form-input" value="${session.email || ''}" required />
               </div>
               <div class="form-group">
-                <label class="form-label">Contraseña (Supabase Auth)</label>
+                <label class="form-label">Contraseña (Firebase Auth)</label>
                 <input type="password" name="authPassword" class="form-input" placeholder="••••••••" />
               </div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button type="submit" class="btn btn-primary btn-sm">Iniciar Sesión</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-register-cloud">Registrar Usuario en Supabase</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-register-cloud">Registrar Usuario</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-sync-push">${icon('upload')} Subir a Nube</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-sync-pull">${icon('download')} Descargar de Nube</button>
             </div>
@@ -223,7 +241,7 @@ export function renderSettings(container) {
       <section class="card">
         <div class="card-header">
           <h2 class="card-title">${icon('settings')} Estado del Sistema</h2>
-          <span class="cyber-tag">${isSupabaseConfigured() ? 'CLOUD' : 'LOCAL'}</span>
+          <span class="cyber-tag">${isFirebaseConfigured() ? 'FIREBASE' : 'LOCAL'}</span>
         </div>
         <p class="body-summary-text">
           Almacenando <strong class="mono">${store.habits.length}</strong> hábitos, <strong class="mono">${store.bodyMetrics.length}</strong> mediciones, <strong class="mono">${store.books.length}</strong> libros, <strong class="mono">${store.journalEntries.length}</strong> entradas de diario y <strong class="mono">${store.transactions.length}</strong> movimientos.
@@ -238,8 +256,8 @@ export function renderSettings(container) {
             : `${Math.max(1, Math.round(bytes / 1024))} KB`;
           const localLimit = 5 * 1024 * 1024;
           const localPct = Math.min(100, Math.round((totalBytes / localLimit) * 100));
-          const supaLimit = 500 * 1024 * 1024;
-          const supaPct = ((totalBytes / supaLimit) * 100).toFixed(3);
+          const firestoreLimit = 1024 * 1024;
+          const fsPct = ((totalBytes / firestoreLimit) * 100).toFixed(1);
           return `
             <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--hud-border);">
               <div style="display:flex;justify-content:space-between;font-size:0.74rem;margin-bottom:5px;" class="mono">
@@ -250,7 +268,7 @@ export function renderSettings(container) {
                 <div class="progress-fill" style="width:${Math.max(2, localPct)}%"></div>
               </div>
               <div class="mono text-muted" style="font-size:0.68rem;margin-top:6px;">
-                Imágenes: ${fmtSize(imagesBytes)} · Supabase (500 MB): ${supaPct}% usado
+                Imágenes: ${fmtSize(imagesBytes)} · Firestore (1 MB/doc): ${fsPct}% usado
               </div>
             </div>
           `;
@@ -295,13 +313,31 @@ export function renderSettings(container) {
     showToast('Perfil y metas actualizados');
   });
 
-  // Guardar credenciales de Supabase
-  container.querySelector('#form-supabase')?.addEventListener('submit', (e) => {
+  // Guardar configuración Firebase
+  container.querySelector('#form-firebase')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    setSupabaseConfig(String(fd.get('url') || ''), String(fd.get('anonKey') || ''));
-    showToast('Configuración de Supabase guardada');
+    const currentCfg = getFirebaseConfig();
+    setFirebaseConfig({
+      ...currentCfg,
+      projectId: String(fd.get('projectId') || ''),
+      apiKey: String(fd.get('apiKey') || ''),
+      authDomain: String(fd.get('authDomain') || ''),
+      appId: String(fd.get('appId') || '')
+    });
+    showToast('Configuración de Firebase guardada');
     renderSettings(container);
+  });
+
+  // Entrar con Google
+  container.querySelector('#btn-google-login')?.addEventListener('click', async () => {
+    try {
+      await loginWithGoogle();
+      showToast('Sesión iniciada con Google');
+      renderSettings(container);
+    } catch (err) {
+      showToast(`Error: ${err.message}`);
+    }
   });
 
   // Iniciar sesión
@@ -331,7 +367,7 @@ export function renderSettings(container) {
         password: String(fd.get('authPassword')),
         name: store.profile.name
       });
-      showToast('Usuario registrado en Supabase (revisa tu correo si requiere confirmación)');
+      showToast('Usuario registrado y conectado en Firebase');
       renderSettings(container);
     } catch (err) {
       showToast(`Error: ${err.message}`);
@@ -340,15 +376,15 @@ export function renderSettings(container) {
 
   // Sincronización manual
   container.querySelector('#btn-sync-push')?.addEventListener('click', async () => {
-    const res = await syncToSupabaseIfConfigured();
-    if (res.ok) showToast('Datos sincronizados en Supabase');
+    const res = await syncToFirebaseIfConfigured();
+    if (res.ok) showToast('Datos sincronizados en Firebase');
     else showToast(`No se pudo subir: ${res.reason}`);
   });
 
   container.querySelector('#btn-sync-pull')?.addEventListener('click', async () => {
-    const res = await pullFromSupabase();
+    const res = await pullFromFirebase();
     if (res.ok) {
-      showToast('Datos descargados desde Supabase');
+      showToast('Datos descargados desde Firebase');
       renderSettings(container);
     } else {
       showToast(`No se pudo descargar: ${res.reason}`);

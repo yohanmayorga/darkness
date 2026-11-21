@@ -1,9 +1,15 @@
-import { getSupabaseClient, getStore, saveStore, pullFromSupabase, syncToSupabaseIfConfigured } from './db.js?v=3.9.0';
+import {
+  getFirebaseClient,
+  getStore,
+  saveStore,
+  pullFromFirebase,
+  syncToFirebaseIfConfigured
+} from './db.js?v=6.0.0';
 
 const SESSION_KEY = 'darkness_session_v1';
 
 /**
- * Obtiene la sesión actual (Local o Supabase)
+ * Obtiene la sesión actual (Local o Firebase Cloud)
  */
 export function getCurrentSession() {
   try {
@@ -25,22 +31,27 @@ export function getCurrentSession() {
   }
 }
 
+async function finishCloudSignIn(user, fallbackName) {
+  const session = {
+    isLogged: true,
+    mode: 'cloud',
+    email: user.email || '',
+    name: fallbackName || user.displayName || (user.email ? user.email.split('@')[0] : 'Usuario Darkness')
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+  const pulled = await pullFromFirebase();
+  if (!pulled.ok && pulled.reason === 'empty') {
+    await syncToFirebaseIfConfigured();
+  }
+  return session;
+}
+
 export async function loginUser({ email, password, name }) {
-  const client = await getSupabaseClient();
-  if (client && password) {
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
-    if (error) {
-      throw new Error(error.message);
-    }
-    const session = {
-      isLogged: true,
-      mode: 'cloud',
-      email: data.user.email,
-      name: name || data.user.user_metadata?.name || email.split('@')[0]
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    await pullFromSupabase();
-    return session;
+  const fb = await getFirebaseClient();
+  if (fb && password) {
+    const cred = await fb.authMod.signInWithEmailAndPassword(fb.auth, email.trim(), password);
+    return finishCloudSignIn(cred.user, name);
   }
 
   // Modo Local / Offline-First
@@ -60,36 +71,34 @@ export async function loginUser({ email, password, name }) {
 }
 
 export async function registerCloudUser({ email, password, name }) {
-  const client = await getSupabaseClient();
-  if (!client) {
-    throw new Error('Primero configura tu URL y Anon Key de Supabase en Ajustes.');
+  const fb = await getFirebaseClient();
+  if (!fb) {
+    throw new Error('Primero configura tu conexión de Firebase en Ajustes.');
   }
-  const { data, error } = await client.auth.signUp({
-    email,
-    password,
-    options: { data: { name } }
-  });
-  if (error) throw new Error(error.message);
+  const cred = await fb.authMod.createUserWithEmailAndPassword(fb.auth, email.trim(), password);
+  if (name) {
+    await fb.authMod.updateProfile(cred.user, { displayName: name }).catch(() => {});
+  }
+  return finishCloudSignIn(cred.user, name);
+}
 
-  const session = {
-    isLogged: true,
-    mode: 'cloud',
-    email: data.user?.email || email,
-    name: name || email.split('@')[0]
-  };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  await syncToSupabaseIfConfigured();
-  return session;
+export async function loginWithGoogle() {
+  const fb = await getFirebaseClient();
+  if (!fb) {
+    throw new Error('Firebase no está configurado.');
+  }
+  const provider = new fb.authMod.GoogleAuthProvider();
+  const cred = await fb.authMod.signInWithPopup(fb.auth, provider);
+  return finishCloudSignIn(cred.user, cred.user.displayName);
 }
 
 export async function logoutUser() {
-  const client = await getSupabaseClient();
-  if (client) {
-    await client.auth.signOut().catch(() => {});
+  const fb = await getFirebaseClient();
+  if (fb) {
+    await fb.authMod.signOut(fb.auth).catch(() => {});
   }
   const current = getCurrentSession();
-  localStorage.setItem(SESSION_KEY, JSON.stringify({
-    ...current,
-    isLogged: false
-  }));
+  const local = { ...current, mode: 'local' };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(local));
+  return local;
 }

@@ -1,5 +1,5 @@
-import { initRouter, getActiveRoute } from './router.js?v=5.7.0';
-import { getStore, isSupabaseConfigured, pullFromSupabase } from './services/db.js?v=5.7.0';
+import { initRouter, getActiveRoute } from './router.js?v=6.0.0';
+import { getStore, isFirebaseConfigured, pullFromFirebase } from './services/db.js?v=6.0.0';
 import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
 
@@ -80,7 +80,7 @@ function updateUserFooter() {
   if (nameEl) nameEl.textContent = name;
   if (avatarEl) avatarEl.textContent = initials;
   if (statusEl) {
-    statusEl.textContent = isSupabaseConfigured() ? 'Supabase Cloud' : 'Almacenamiento Local';
+    statusEl.textContent = isFirebaseConfigured() ? 'Firebase Cloud' : 'Almacenamiento Local';
   }
 }
 
@@ -154,8 +154,8 @@ function initShell() {
   });
 
   // 8. Sincronización automática desde la nube al abrir la página (sin pedir login de nuevo)
-  if (isSupabaseConfigured()) {
-    pullFromSupabase().then(res => {
+  if (isFirebaseConfigured()) {
+    pullFromFirebase().then(res => {
       if (res?.ok) {
         updateUserFooter();
         renderMementoSidebar();

@@ -1616,3 +1616,152 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================
+   Pantalla de Bloqueo Inicial (PIN 8 Dígitos)
+   ========================================== */
+html.app-locked,
+html.app-locked body {
+  background-color: var(--pin-gate-bg);
+  background-image: none;
+  overflow: hidden;
+}
+
+html.app-locked .app-shell {
+  display: none !important;
+}
+
+.pin-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  background-color: var(--pin-gate-bg);
+  color: var(--pin-gate-fg);
+}
+
+html.app-locked .pin-gate {
+  display: flex;
+}
+
+.pin-gate-box {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.pin-gate-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pin-slots-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.pin-gate-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 2;
+  font-size: 16px;
+  cursor: pointer;
+  caret-color: transparent;
+}
+
+.pin-slots {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 344px;
+}
+
+.pin-slot {
+  height: 48px;
+  border: 1px solid var(--pin-gate-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--pin-gate-slot-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.pin-slot::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--pin-gate-fg);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.pin-slot.filled::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pin-gate-input:focus + .pin-slots .pin-slot.active {
+  border-color: var(--pin-gate-focus);
+}
+
+.pin-slots.is-loading .pin-slot {
+  opacity: 0.55;
+}
+
+.pin-slots.is-error .pin-slot {
+  border-color: var(--pin-gate-error);
+}
+
+.pin-slots.is-error {
+  animation: pin-shake 0.32s ease-in-out;
+}
+
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+}
+
+.pin-gate-skull-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.78;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.pin-gate-skull-btn:hover,
+.pin-gate-skull-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1.05);
+  outline: none;
+}
+
+.pin-gate-skull-btn img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: block;
+}

@@ -1,11 +1,19 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.4.0';
-import { getStore, isFirebaseConfigured, pullFromFirebase } from './services/db.js?v=6.1.0';
-import { handleGoogleRedirectResult } from './services/auth.js?v=6.2.0';
+import { initRouter, getActiveRoute } from './router.js?v=6.5.0';
+import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.1.0';
+import {
+  handleGoogleRedirectResult,
+  loginWithPin,
+  registerWithPin,
+  loginWithGoogle,
+  isValidPin
+} from './services/auth.js?v=6.3.0';
 import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
 
 const THEME_KEY = 'darkness_theme';
 const SIDEBAR_KEY = 'darkness_sidebar_collapsed';
+const PIN_UNLOCKED_KEY = 'darkness_pin_unlocked';
+let shellInitialized = false;
 
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', shortLabel: 'Inicio', icon: 'dashboard' },
@@ -110,9 +118,14 @@ function initShell() {
     localStorage.setItem(SIDEBAR_KEY, isCollapsed ? '1' : '0');
   });
 
-  // 3. Botones de cambio de tema (escritorio y móvil)
+  // 3. Botones de cambio de tema y bloqueo (escritorio y móvil)
   document.querySelectorAll('[data-action="toggle-theme"]').forEach(btn => {
     btn.addEventListener('click', () => window.toggleDarknessTheme());
+  });
+
+  document.querySelectorAll('[data-action="lock-app"]').forEach(btn => {
+    btn.innerHTML = icon('lock');
+    btn.addEventListener('click', () => window.lockDarknessApp());
   });
 
   // 4. Botón móvil de Memento Mori (al lado del icono de luna/sol)
@@ -178,4 +191,128 @@ function initShell() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', initShell);
+function unlockAppAndInit() {
+  document.documentElement.classList.remove('app-locked');
+  if (!shellInitialized) {
+    shellInitialized = true;
+    initShell();
+  }
+}
+
+window.lockDarknessApp = () => {
+  sessionStorage.removeItem(PIN_UNLOCKED_KEY);
+  location.reload();
+};
+
+function initPinGate() {
+  const form = document.getElementById('pin-gate-form');
+  const input = document.getElementById('pin-gate-input');
+  const slotsWrap = document.getElementById('pin-slots');
+  const slots = document.querySelectorAll('#pin-slots .pin-slot');
+  const googleBtn = document.getElementById('pin-gate-google-btn');
+
+  if (!form || !input) return;
+
+  let busy = false;
+
+  const updateSlots = (len) => {
+    slots.forEach((slot, idx) => {
+      slot.classList.toggle('filled', idx < len);
+      slot.classList.toggle('active', idx === Math.min(len, slots.length - 1));
+    });
+  };
+
+  const triggerError = () => {
+    if (!slotsWrap) return;
+    slotsWrap.classList.remove('is-error');
+    void slotsWrap.offsetWidth;
+    slotsWrap.classList.add('is-error');
+    setTimeout(() => slotsWrap.classList.remove('is-error'), 450);
+  };
+
+  async function handlePinSubmit() {
+    if (busy) return;
+    const pin = input.value.replace(/\D/g, '');
+    if (!isValidPin(pin)) {
+      triggerError();
+      input.focus();
+      return;
+    }
+
+    busy = true;
+    input.disabled = true;
+    slotsWrap?.classList.add('is-loading');
+
+    try {
+      await loginWithPin(pin);
+      sessionStorage.setItem(PIN_UNLOCKED_KEY, '1');
+      unlockAppAndInit();
+    } catch (err) {
+      console.warn('Error al validar clave:', err?.code || err?.message);
+      triggerError();
+      input.value = '';
+      updateSlots(0);
+    } finally {
+      busy = false;
+      input.disabled = false;
+      slotsWrap?.classList.remove('is-loading');
+      if (document.documentElement.classList.contains('app-locked')) {
+        input.focus();
+      }
+    }
+  }
+
+  input.addEventListener('input', () => {
+    const clean = input.value.replace(/\D/g, '').slice(0, 8);
+    if (input.value !== clean) input.value = clean;
+    updateSlots(clean.length);
+    if (clean.length === 8) {
+      handlePinSubmit();
+    }
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    handlePinSubmit();
+  });
+
+  googleBtn?.addEventListener('click', async () => {
+    if (busy) return;
+    busy = true;
+    slotsWrap?.classList.add('is-loading');
+    try {
+      await loginWithGoogle();
+      sessionStorage.setItem(PIN_UNLOCKED_KEY, '1');
+      unlockAppAndInit();
+    } catch (err) {
+      console.warn('Error al iniciar sesión con Google:', err?.code || err?.message);
+      triggerError();
+    } finally {
+      busy = false;
+      slotsWrap?.classList.remove('is-loading');
+    }
+  });
+
+  updateSlots(0);
+  requestAnimationFrame(() => input.focus());
+}
+
+async function bootstrapApp() {
+  applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+
+  if (sessionStorage.getItem(PIN_UNLOCKED_KEY) === '1') {
+    const fb = await getFirebaseClient();
+    if (fb) {
+      await fb.auth.authStateReady();
+      if (fb.auth.currentUser) {
+        unlockAppAndInit();
+        return;
+      }
+    }
+    sessionStorage.removeItem(PIN_UNLOCKED_KEY);
+  }
+
+  initPinGate();
+}
+
+document.addEventListener('DOMContentLoaded', bootstrapApp);

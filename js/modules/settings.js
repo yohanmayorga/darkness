@@ -9,7 +9,7 @@ import {
   syncToFirebaseIfConfigured,
   pullFromFirebase
 } from '../services/db.js?v=6.0.0';
-import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser } from '../services/auth.js?v=6.2.0';
+import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser, migrateStoreToPin, isValidPin } from '../services/auth.js?v=6.3.0';
 import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
@@ -151,6 +151,18 @@ export function renderSettings(container) {
               <button type="button" class="btn btn-ghost btn-sm" id="btn-sync-push">${icon('upload')} Subir a Nube</button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-sync-pull">${icon('download')} Descargar de Nube</button>
             </div>
+          </form>
+        </div>
+
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
+          <h3 style="font-size:0.9rem;margin-bottom:6px;">Acceso con Clave de 8 Dígitos</h3>
+          <p class="text-secondary" style="font-size:0.78rem;margin-bottom:10px;">
+            Vincula tus datos actuales a una clave numérica de 8 dígitos para entrar desde cualquier dispositivo sin depender del caché.
+          </p>
+          <form id="form-pin-migrate" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="password" name="pinCode" class="form-input mono" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="8 dígitos" style="flex:1;min-width:140px;font-size:16px;" required />
+            <button type="submit" class="btn btn-primary btn-sm">Guardar en esta Clave</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-lock-app">${icon('lock')} Bloquear</button>
           </form>
         </div>
       </section>
@@ -371,6 +383,30 @@ export function renderSettings(container) {
       renderSettings(container);
     } catch (err) {
       showToast(`Error: ${err.message}`);
+    }
+  });
+
+  // Vincular / Migrar datos actuales a PIN de 8 dígitos
+  container.querySelector('#form-pin-migrate')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const pin = String(fd.get('pinCode') || '').replace(/\D/g, '');
+    if (!isValidPin(pin)) {
+      showToast('La clave debe tener exactamente 8 dígitos numéricos');
+      return;
+    }
+    try {
+      await migrateStoreToPin(pin);
+      showToast('Datos guardados en tu bóveda de 8 dígitos en Firebase');
+      renderSettings(container);
+    } catch (err) {
+      showToast(`Error: ${err.message}`);
+    }
+  });
+
+  container.querySelector('#btn-lock-app')?.addEventListener('click', () => {
+    if (typeof window.lockDarknessApp === 'function') {
+      window.lockDarknessApp();
     }
   });
 

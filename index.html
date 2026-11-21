@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es" data-theme="light" class="app-locked">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -22,14 +22,44 @@
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
   <!-- Hojas de Estilo con Cache-Busting v4.4.0 -->
-  <link rel="stylesheet" href="assets/css/variables.css?v=5.4.0" />
+  <link rel="stylesheet" href="assets/css/variables.css?v=5.5.0" />
   <link rel="stylesheet" href="assets/css/base.css?v=2.6.0" />
-  <link rel="stylesheet" href="assets/css/layout.css?v=5.4.0" />
-  <link rel="stylesheet" href="assets/css/components.css?v=5.6.0" />
+  <link rel="stylesheet" href="assets/css/layout.css?v=5.6.0" />
+  <link rel="stylesheet" href="assets/css/components.css?v=5.8.0" />
   <link rel="stylesheet" href="assets/css/journal.css?v=2.6.0" />
   <link rel="stylesheet" href="assets/css/habits.css?v=3.6.0" />
 </head>
 <body>
+  <!-- Pantalla de Bloqueo Inicial (PIN 8 Dígitos) -->
+  <div id="pin-gate" class="pin-gate" role="dialog" aria-modal="true" aria-label="Clave de acceso">
+    <div class="pin-gate-box">
+      <form id="pin-gate-form" class="pin-gate-form" autocomplete="off">
+        <div class="pin-slots-wrap">
+          <input
+            type="password"
+            id="pin-gate-input"
+            class="pin-gate-input"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="8"
+            aria-label="Clave numérica de 8 dígitos"
+            autofocus
+            required
+          />
+          <div class="pin-slots" id="pin-slots" aria-hidden="true">
+            <span class="pin-slot active"></span><span class="pin-slot"></span>
+            <span class="pin-slot"></span><span class="pin-slot"></span>
+            <span class="pin-slot"></span><span class="pin-slot"></span>
+            <span class="pin-slot"></span><span class="pin-slot"></span>
+          </div>
+        </div>
+      </form>
+      <button type="button" class="pin-gate-skull-btn" id="pin-gate-google-btn" title="Entrar con Google" aria-label="Entrar con Google">
+        <img src="assets/icons/icon.svg?v=6.5.0" alt="" />
+      </button>
+    </div>
+  </div>
+
   <div class="app-shell" id="app-shell">
     <!-- Sidebar Lateral Izquierda (Escritorio) -->
     <aside class="sidebar" aria-label="Navegación Principal">
@@ -68,6 +98,7 @@
       <div class="sidebar-footer">
         <div class="sidebar-actions">
           <button type="button" class="btn-icon" data-action="toggle-theme" aria-label="Cambiar Tema"></button>
+          <button type="button" class="btn-icon" data-action="lock-app" title="Bloquear" aria-label="Bloquear"></button>
         </div>
 
         <a href="#/settings" class="user-pill">
@@ -94,6 +125,7 @@
         <div class="mobile-topbar-actions">
           <button type="button" class="btn-icon" id="btn-mobile-memento" data-action="toggle-memento" title="Memento Mori" aria-label="Abrir Memento Mori"></button>
           <button type="button" class="btn-icon" data-action="toggle-theme" aria-label="Cambiar Tema"></button>
+          <button type="button" class="btn-icon" data-action="lock-app" title="Bloquear" aria-label="Bloquear"></button>
         </div>
       </header>
 
@@ -109,7 +141,7 @@
     <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Navegación Móvil"></nav>
   </div>
 
-  <!-- Aplicación Modular con Cache-Busting v6.6.0 -->
-  <script type="module" src="js/app.js?v=6.6.0"></script>
+  <!-- Aplicación Modular con Cache-Busting v6.8.0 -->
+  <script type="module" src="js/app.js?v=6.8.0"></script>
 </body>
 </html>

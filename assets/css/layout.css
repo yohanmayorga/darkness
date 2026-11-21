@@ -100,9 +100,14 @@
 
 .cyber-hazard-block {
   flex: 1;
-  height: 7px;
-  background-image: var(--cyber-stripe-strong);
-  border: 1px solid var(--border-subtle);
+  height: 6px;
+  background-color: var(--cyber-yellow-bg);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--cyber-yellow) 0 4px,
+    transparent 4.5px 9px
+  );
+  border-radius: var(--radius-sm);
 }
 
 .cyber-hazard-chevrons {

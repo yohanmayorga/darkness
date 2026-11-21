@@ -5,7 +5,7 @@ import { renderBody } from './modules/body.js?v=5.3.0';
 import { renderReading } from './modules/reading.js?v=5.5.0';
 import { renderJournal } from './modules/journal.js?v=2.6.0';
 import { renderFinance } from './modules/finance.js?v=6.4.0';
-import { renderSettings } from './modules/settings.js?v=6.2.0';
+import { renderSettings } from './modules/settings.js?v=6.3.0';
 
 const ROUTES = {
   '/dashboard': renderDashboard,

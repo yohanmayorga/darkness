@@ -1,7 +1,8 @@
-import { getStore, saveStore, generateId, todayISO } from '../services/db.js?v=2.4.0';
-import { icon } from '../components/icons.js?v=1.4.0';
+import { getStore, saveStore, generateId, todayISO } from '../services/db.js?v=3.9.0';
+import { icon } from '../components/icons.js?v=3.3.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
+import { formatDateDMY } from '../utils/text.js?v=4.3.0';
 
 const BODY_METRICS_META = [
   { key: 'weightKg', label: 'Peso', unit: 'kg', step: '0.1', placeholder: '74.5' },
@@ -26,6 +27,9 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
 const CAL_WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 let selectedChartMetric = 'weightKg';
+let selectedChartYear = 'all';
+let selectedChartMonth = 'all';
+let chartZoom = 1;
 let selectedBodyDate = todayISO();
 let calYear = null;
 let calMonth = null;
@@ -88,19 +92,19 @@ function buildBodySummaryAndAlerts(sorted, profile, today) {
   const prevWeight = prev ? getMetricValue(prev, 'weightKg') : null;
 
   const parts = [];
-  parts.push(`Último registro el <strong class="mono">${latest.date}</strong>${latest.time ? ` a las <strong class="mono">${latest.time}</strong>` : ''}:`);
+  parts.push(`Último registro el <span class="mono text-primary">${formatDateDMY(latest.date)}</span>${latest.time ? ` (${latest.time})` : ''}:`);
 
   if (weight !== null) {
-    let wText = `peso actual de <strong class="mono">${weight} kg</strong>`;
+    let wText = `peso actual de <span class="mono text-primary">${weight} kg</span>`;
     if (prevWeight !== null) {
       const diff = Number((weight - prevWeight).toFixed(1));
-      wText += ` (${diff > 0 ? '+' : ''}${diff} kg respecto al registro anterior)`;
+      wText += ` (${diff > 0 ? '+' : ''}${diff} kg vs anterior)`;
     }
     if (targetW > 0) {
       const toGoal = Number((weight - targetW).toFixed(1));
-      if (Math.abs(toGoal) < 0.1) wText += `, en tu meta de <strong class="mono">${targetW} kg</strong>`;
-      else if (toGoal > 0) wText += `, a <strong class="mono">${toGoal} kg</strong> de tu meta (${targetW} kg)`;
-      else wText += `, <strong class="mono">${Math.abs(toGoal)} kg</strong> por debajo de tu meta (${targetW} kg)`;
+      if (Math.abs(toGoal) < 0.1) wText += `, en tu meta de ${targetW} kg`;
+      else if (toGoal > 0) wText += `, a ${toGoal} kg de tu meta (${targetW} kg)`;
+      else wText += `, ${Math.abs(toGoal)} kg por debajo de tu meta (${targetW} kg)`;
     }
     parts.push(wText + '.');
   }
@@ -115,14 +119,14 @@ function buildBodySummaryAndAlerts(sorted, profile, today) {
   const waist = getMetricValue(latest, 'waistCm');
   const metAge = getMetricValue(latest, 'metabolicAge');
 
-  if (bmi !== null) details.push(`IMC <strong class="mono">${bmi}</strong>`);
-  if (fat !== null) details.push(`grasa corporal <strong class="mono">${fat}%</strong>`);
-  if (visceral !== null) details.push(`grasa visceral <strong class="mono">${visceral}</strong>`);
-  if (muscle !== null) details.push(`masa muscular <strong class="mono">${muscle} kg</strong>`);
-  if (water !== null) details.push(`agua corporal <strong class="mono">${water}%</strong>`);
-  if (bmr !== null) details.push(`TMB <strong class="mono">${bmr} kcal</strong>`);
-  if (metAge !== null) details.push(`edad metabólica <strong class="mono">${metAge} años</strong>`);
-  if (waist !== null) details.push(`cintura <strong class="mono">${waist} cm</strong>`);
+  if (bmi !== null) details.push(`IMC ${bmi}`);
+  if (fat !== null) details.push(`grasa ${fat}%`);
+  if (visceral !== null) details.push(`visceral ${visceral}`);
+  if (muscle !== null) details.push(`músculo ${muscle} kg`);
+  if (water !== null) details.push(`agua ${water}%`);
+  if (bmr !== null) details.push(`TMB ${bmr} kcal`);
+  if (metAge !== null) details.push(`edad metabólica ${metAge} años`);
+  if (waist !== null && waist > 0) details.push(`cintura ${waist} cm`);
 
   if (details.length) {
     parts.push(`Presentas ${details.join(', ')}.`);
@@ -231,7 +235,7 @@ function buildBodyCalendar(records, today) {
     </div>
     <div class="body-cal-day-action">
       <div>
-        <div class="mono" style="font-weight:600;">${selectedBodyDate}</div>
+        <div class="mono" style="font-weight:600;">${formatDateDMY(selectedBodyDate)}</div>
         <div class="text-muted">${selectedDayItems.length ? `${selectedDayItems.length} registro(s) · ${selectedDayItems[0].weightKg ?? '--'} kg` : 'Sin registro este día'}</div>
       </div>
       <button type="button" class="btn btn-primary btn-sm" id="btn-body-load-date">
@@ -248,10 +252,15 @@ function buildBodyChartSVG(records, metricKey) {
   const meta = BODY_METRICS_META.find(m => m.key === metricKey) || BODY_METRICS_META[0];
   const chronological = [...records]
     .sort((a, b) => `${a.date} ${a.time || '00:00'}`.localeCompare(`${b.date} ${b.time || '00:00'}`))
-    .filter(r => getMetricValue(r, meta.key) !== null);
+    .filter(r => {
+      if (getMetricValue(r, meta.key) === null) return false;
+      if (selectedChartYear !== 'all' && !String(r.date || '').startsWith(`${selectedChartYear}-`)) return false;
+      if (selectedChartMonth !== 'all' && String(r.date || '').slice(5, 7) !== selectedChartMonth) return false;
+      return true;
+    });
 
   if (chronological.length === 0) {
-    return `<div class="empty-state">Agrega registros con ${meta.label.toLowerCase()} para visualizar la curva.</div>`;
+    return `<div class="empty-state">No hay registros de ${meta.label.toLowerCase()} para el período seleccionado.</div>`;
   }
 
   const padX = 6;
@@ -273,28 +282,65 @@ function buildBodyChartSVG(records, metricKey) {
       ? 50
       : padX + (idx / (chronological.length - 1)) * (100 - padX * 2);
     const y = (100 - padBot) - ((val - minV) / range) * (100 - padTop - padBot);
-    return { x, y, date: r.date.slice(5), val };
+    return { x, y, date: formatDateDMY(r.date), fullDate: formatDateDMY(r.date), val };
   });
 
   const polyline = points.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
   const baseLine = 100 - padBot;
   const areaPoints = `${points[0].x.toFixed(2)},${baseLine} ${polyline} ${points[points.length - 1].x.toFixed(2)},${baseLine}`;
 
+  const totalPts = points.length;
+  const maxLabels = Math.max(5, Math.round(6 * chartZoom));
+  const dense = totalPts > maxLabels + 4;
+  const step = Math.max(1, Math.ceil((totalPts - 1) / maxLabels));
+  const minIdx = values.indexOf(rawMin);
+  const maxIdx = values.indexOf(rawMax);
+  const labelIndices = new Set([0, totalPts - 1, minIdx, maxIdx]);
+  if (!dense) {
+    points.forEach((_, idx) => labelIndices.add(idx));
+  } else {
+    for (let i = 0; i < totalPts; i += step) labelIndices.add(i);
+  }
+
+  // Evitar que dos etiquetas queden demasiado pegadas en modo denso
+  const minGapPct = 11 / chartZoom;
+  const shownIndices = [...labelIndices].sort((a, b) => a - b).filter((idx, pos, arr) => {
+    if (!dense || pos === 0 || idx === totalPts - 1) return true;
+    const prevX = points[arr[pos - 1]].x;
+    const currX = points[idx].x;
+    const lastX = points[totalPts - 1].x;
+    if (currX - prevX < minGapPct) return false;
+    if (idx !== totalPts - 1 && lastX - currX < minGapPct * 0.85) return false;
+    return true;
+  });
+
   return `
-    <div class="chart-box">
-      <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-        <line x1="${padX}" y1="${padTop}" x2="${100 - padX}" y2="${padTop}" stroke="var(--chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>
-        <line x1="${padX}" y1="${(padTop + baseLine) / 2}" x2="${100 - padX}" y2="${(padTop + baseLine) / 2}" stroke="var(--chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>
-        <line x1="${padX}" y1="${baseLine}" x2="${100 - padX}" y2="${baseLine}" stroke="var(--chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>
-        <polygon points="${areaPoints}" fill="var(--chart-fill)" />
-        <polyline fill="none" stroke="var(--chart-line)" stroke-width="2" vector-effect="non-scaling-stroke" points="${polyline}" />
-      </svg>
-      <div class="chart-overlay">
-        ${points.map(p => `
-          <span class="chart-point-dot" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%;"></span>
-          <span class="chart-point-val" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%;">${formatVal(p.val, meta.unit)}</span>
-          <span class="chart-point-date" style="left:${p.x.toFixed(2)}%;">${p.date}</span>
-        `).join('')}
+    <div class="mono text-muted" style="display:flex;flex-wrap:wrap;gap:12px;font-size:0.7rem;margin-bottom:6px;">
+      <span>Registros: <strong class="text-primary">${totalPts}</strong></span>
+      <span>Mín: <strong class="text-primary">${formatVal(rawMin, meta.unit)}</strong></span>
+      <span>Máx: <strong class="text-primary">${formatVal(rawMax, meta.unit)}</strong></span>
+      <span>Actual: <strong class="text-primary">${formatVal(values[values.length - 1], meta.unit)}</strong></span>
+      ${chartZoom > 1 ? `<span>Zoom: <strong class="text-primary">${chartZoom}x</strong></span>` : ''}
+    </div>
+    <div class="chart-scroll-wrap">
+      <div class="chart-box" style="width:${chartZoom * 100}%;min-width:100%;">
+        <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1="${padX}" y1="${padTop}" x2="${100 - padX}" y2="${padTop}" stroke="var(--chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+          <line x1="${padX}" y1="${(padTop + baseLine) / 2}" x2="${100 - padX}" y2="${(padTop + baseLine) / 2}" stroke="var(--chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+          <line x1="${padX}" y1="${baseLine}" x2="${100 - padX}" y2="${baseLine}" stroke="var(--chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+          <polygon points="${areaPoints}" fill="var(--chart-fill)" />
+          <polyline fill="none" stroke="var(--chart-line)" stroke-width="2" vector-effect="non-scaling-stroke" points="${polyline}" />
+        </svg>
+        <div class="chart-overlay">
+          ${shownIndices.map(idx => {
+            const p = points[idx];
+            return `
+              <span class="chart-point-dot" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%;" title="${p.fullDate}: ${formatVal(p.val, meta.unit)}"></span>
+              <span class="chart-point-val" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%;">${formatVal(p.val, meta.unit)}</span>
+              <span class="chart-point-date" style="left:${p.x.toFixed(2)}%;">${p.date}</span>
+            `;
+          }).join('')}
+        </div>
       </div>
     </div>
   `;
@@ -357,6 +403,21 @@ function openBodyModal(container, latest, prefillDate = todayISO()) {
   });
 }
 
+function goalTrendClass(curr, prev, target, tolerance = 0.5) {
+  const c = getMetricValue({ v: curr }, 'v');
+  const t = getMetricValue({ v: target }, 'v');
+  if (c === null || t === null || t <= 0) return '';
+  const distCurr = Math.abs(c - t);
+  if (distCurr <= tolerance) return 'kpi-lvl-high';
+  const p = prev !== null && prev !== undefined ? getMetricValue({ v: prev }, 'v') : null;
+  if (p !== null) {
+    const distPrev = Math.abs(p - t);
+    if (distCurr < distPrev) return 'kpi-lvl-high';
+    if (distCurr > distPrev) return 'kpi-lvl-low';
+  }
+  return distCurr <= tolerance * 3 ? '' : 'kpi-lvl-low';
+}
+
 export function renderBody(container) {
   const store = getStore();
   const today = todayISO();
@@ -389,16 +450,16 @@ export function renderBody(container) {
     </header>
 
     <section class="grid-kpi">
-      <div class="kpi-card">
+      <div class="kpi-card ${goalTrendClass(latest.weightKg, previous.weightKg, store.profile.targetWeightKg, 0.5)}">
         <div class="kpi-top"><span>Peso Actual</span>${icon('body')}</div>
         <div class="kpi-value">${latest.weightKg ?? '--'} <small style="font-size:0.9rem;">kg</small></div>
-        <div class="kpi-meta">Cambio vs anterior: <span class="mono">${weightDelta > 0 ? '+' + weightDelta : weightDelta} kg</span></div>
+        <div class="kpi-meta">Cambio: <span class="mono">${weightDelta > 0 ? '+' + weightDelta : weightDelta} kg</span> · Meta: <span class="mono">${store.profile.targetWeightKg || '--'} kg</span></div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card ${goalTrendClass(latest.bodyFatPct, previous.bodyFatPct, store.profile.targetBodyFatPct ?? 15, 0.5)}">
         <div class="kpi-top"><span>Grasa Corporal / IMC</span>${icon('body')}</div>
         <div class="kpi-value">${latest.bodyFatPct ?? '--'}% <small style="font-size:0.85rem;">/ ${latest.bmi ?? '--'}</small></div>
-        <div class="kpi-meta">Visceral: <span class="mono">${latest.visceralFat ?? '--'}</span> · Meta: <span class="mono">${store.profile.targetWeightKg} kg</span></div>
+        <div class="kpi-meta">Visceral: <span class="mono">${latest.visceralFat ?? '--'}</span> · Meta grasa: <span class="mono">${store.profile.targetBodyFatPct ?? 15}%</span></div>
       </div>
 
       <div class="kpi-card">
@@ -407,21 +468,42 @@ export function renderBody(container) {
         <div class="kpi-meta">TMB: <span class="mono">${latest.bmr ?? '--'} kcal</span> · Edad met.: <span class="mono">${latest.metabolicAge ?? '--'}</span></div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card ${goalTrendClass(latest.waistCm > 0 ? latest.waistCm : null, previous.waistCm > 0 ? previous.waistCm : null, store.profile.targetWaistCm ?? 80, 1)}">
         <div class="kpi-top"><span>Perímetros (cm)</span>${icon('body')}</div>
         <div class="kpi-value">${latest.waistCm ?? '--'} <small style="font-size:0.85rem;">cintura</small></div>
-        <div class="kpi-meta">Bíceps: <span class="mono">${latestBiceps ?? '--'} cm</span> · Muslo: <span class="mono">${latest.thighCm ?? '--'} cm</span></div>
+        <div class="kpi-meta">Bíceps: <span class="mono">${latestBiceps ?? '--'}</span> · Muslo: <span class="mono">${latest.thighCm ?? '--'}</span> · Meta: <span class="mono">${store.profile.targetWaistCm ?? 80} cm</span></div>
       </div>
     </section>
 
     <section class="card" style="margin-bottom: 24px;">
-      <div class="card-header">
+      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
         <h2 class="card-title" id="body-chart-title">${icon('body')} Evolución: ${activeMeta.label}${activeMeta.unit ? ` (${activeMeta.unit})` : ''}</h2>
-        <select id="body-chart-metric" class="form-select" style="width:auto;min-width:190px;min-height:32px;padding:4px 10px;font-size:0.76rem;" aria-label="Seleccionar métrica del gráfico">
-          ${BODY_METRICS_META.map(m => `
-            <option value="${m.key}" ${m.key === selectedChartMetric ? 'selected' : ''}>${m.label}${m.unit ? ` (${m.unit})` : ''}</option>
-          `).join('')}
-        </select>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <select id="body-chart-year" class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:0.76rem;" aria-label="Filtrar por año">
+            <option value="all" ${selectedChartYear === 'all' ? 'selected' : ''}>Todos los años</option>
+            ${[...new Set((store.bodyMetrics || []).map(r => String(r.date || '').slice(0, 4)).filter(Boolean))].sort().reverse().map(y => `
+              <option value="${y}" ${selectedChartYear === y ? 'selected' : ''}>${y}</option>
+            `).join('')}
+          </select>
+          <select id="body-chart-month" class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:0.76rem;" aria-label="Filtrar por mes">
+            <option value="all" ${selectedChartMonth === 'all' ? 'selected' : ''}>Todos los meses</option>
+            ${MONTHS.map((mName, idx) => {
+              const mm = String(idx + 1).padStart(2, '0');
+              return `<option value="${mm}" ${selectedChartMonth === mm ? 'selected' : ''}>${mName}</option>`;
+            }).join('')}
+          </select>
+          <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom del gráfico">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-chart-zoom-out" title="Alejar zoom">−</button>
+            <button type="button" class="btn btn-secondary btn-sm mono" id="btn-chart-zoom-reset" title="Restablecer zoom">${chartZoom}x</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-chart-zoom-in" title="Acercar zoom">+</button>
+          </div>
+          <select id="body-chart-metric" class="form-select" style="width:auto;min-width:170px;min-height:32px;padding:4px 10px;font-size:0.76rem;" aria-label="Seleccionar métrica del gráfico">
+            ${BODY_METRICS_META.map(m => `
+              <option value="${m.key}" ${m.key === selectedChartMetric ? 'selected' : ''}>${m.label}${m.unit ? ` (${m.unit})` : ''}</option>
+            `).join('')}
+          </select>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-chart-reset-filters" title="Restablecer peso, fechas y zoom">Borrar filtros</button>
+        </div>
       </div>
       <div id="body-chart-container">
         ${buildBodyChartSVG(store.bodyMetrics, selectedChartMetric)}
@@ -435,7 +517,7 @@ export function renderBody(container) {
       ${sorted.length === 0 ? `
         <div class="empty-state">Sin mediciones registradas todavía.</div>
       ` : `
-        <div class="table-wrap">
+        <div class="table-wrap body-history-table-wrap">
           <table class="data-table">
             <thead>
               <tr>
@@ -465,7 +547,7 @@ export function renderBody(container) {
                 const biceps = item.bicepsCm ?? item.armCm;
                 return `
                   <tr>
-                    <td class="mono">${item.date || '--'}</td>
+                    <td class="mono">${formatDateDMY(item.date)}</td>
                     <td class="mono">${item.time || '--'}</td>
                     <td class="mono" style="font-weight:600;">${formatVal(item.weightKg, 'kg')}</td>
                     <td class="mono">${item.bmi ?? '--'}</td>
@@ -520,22 +602,58 @@ export function renderBody(container) {
     </aside>
   `;
 
-  // Filtro de métrica del gráfico
-  const chartSelect = container.querySelector('#body-chart-metric');
-  if (chartSelect) {
-    chartSelect.addEventListener('change', () => {
-      selectedChartMetric = chartSelect.value;
-      const meta = BODY_METRICS_META.find(m => m.key === selectedChartMetric) || BODY_METRICS_META[0];
-      const titleEl = container.querySelector('#body-chart-title');
-      const chartContainer = container.querySelector('#body-chart-container');
-      if (titleEl) {
-        titleEl.innerHTML = `${icon('body')} Evolución: ${meta.label}${meta.unit ? ` (${meta.unit})` : ''}`;
-      }
-      if (chartContainer) {
-        chartContainer.innerHTML = buildBodyChartSVG(getStore().bodyMetrics, selectedChartMetric);
-      }
-    });
-  }
+  // Filtros y zoom del gráfico
+  const refreshChart = () => {
+    const meta = BODY_METRICS_META.find(m => m.key === selectedChartMetric) || BODY_METRICS_META[0];
+    const titleEl = container.querySelector('#body-chart-title');
+    const chartContainer = container.querySelector('#body-chart-container');
+    const zoomBtn = container.querySelector('#btn-chart-zoom-reset');
+    if (titleEl) {
+      titleEl.innerHTML = `${icon('body')} Evolución: ${meta.label}${meta.unit ? ` (${meta.unit})` : ''}`;
+    }
+    if (zoomBtn) zoomBtn.textContent = `${chartZoom}x`;
+    if (chartContainer) {
+      chartContainer.innerHTML = buildBodyChartSVG(getStore().bodyMetrics, selectedChartMetric);
+    }
+  };
+
+  container.querySelector('#body-chart-metric')?.addEventListener('change', (e) => {
+    selectedChartMetric = e.target.value;
+    refreshChart();
+  });
+  container.querySelector('#body-chart-year')?.addEventListener('change', (e) => {
+    selectedChartYear = e.target.value;
+    refreshChart();
+  });
+  container.querySelector('#body-chart-month')?.addEventListener('change', (e) => {
+    selectedChartMonth = e.target.value;
+    refreshChart();
+  });
+  container.querySelector('#btn-chart-zoom-in')?.addEventListener('click', () => {
+    chartZoom = Math.min(6, chartZoom + 1);
+    refreshChart();
+  });
+  container.querySelector('#btn-chart-zoom-out')?.addEventListener('click', () => {
+    chartZoom = Math.max(1, chartZoom - 1);
+    refreshChart();
+  });
+  container.querySelector('#btn-chart-zoom-reset')?.addEventListener('click', () => {
+    chartZoom = 1;
+    refreshChart();
+  });
+  container.querySelector('#btn-chart-reset-filters')?.addEventListener('click', () => {
+    selectedChartMetric = 'weightKg';
+    selectedChartYear = 'all';
+    selectedChartMonth = 'all';
+    chartZoom = 1;
+    const metricEl = container.querySelector('#body-chart-metric');
+    const yearEl = container.querySelector('#body-chart-year');
+    const monthEl = container.querySelector('#body-chart-month');
+    if (metricEl) metricEl.value = 'weightKg';
+    if (yearEl) yearEl.value = 'all';
+    if (monthEl) monthEl.value = 'all';
+    refreshChart();
+  });
 
   // Navegación del calendario y selección de fecha
   container.querySelectorAll('[data-cal]').forEach(btn => {
@@ -572,6 +690,7 @@ export function renderBody(container) {
   // Eliminar registro
   container.querySelectorAll('[data-delete-body]').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (!window.confirm('¿Estás seguro de borrar esta medición corporal?')) return;
       const id = btn.getAttribute('data-delete-body');
       const current = getStore();
       current.bodyMetrics = current.bodyMetrics.filter(r => r.id !== id);

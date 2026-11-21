@@ -17,14 +17,21 @@ create table if not exists public.user_snapshots (
 -- Activar Row Level Security (RLS) para que ningún usuario pueda ver ni modificar datos ajenos
 alter table public.user_snapshots enable row level security;
 
+-- Permisos de acceso para usuarios autenticados (RLS restringe a auth.uid())
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on table public.user_snapshots to authenticated;
+
+drop policy if exists "Usuarios leen solo su propio snapshot" on public.user_snapshots;
 create policy "Usuarios leen solo su propio snapshot"
   on public.user_snapshots for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Usuarios insertan solo su propio snapshot" on public.user_snapshots;
 create policy "Usuarios insertan solo su propio snapshot"
   on public.user_snapshots for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Usuarios actualizan solo su propio snapshot" on public.user_snapshots;
 create policy "Usuarios actualizan solo su propio snapshot"
   on public.user_snapshots for update
   using (auth.uid() = user_id)

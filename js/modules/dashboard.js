@@ -1,9 +1,22 @@
-import { getStore, saveStore, todayISO } from '../services/db.js?v=1.4.0';
-import { icon } from '../components/icons.js?v=1.4.0';
+import { getStore, saveStore, todayISO } from '../services/db.js?v=4.8.0';
+import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { renderMementoSidebar } from '../components/memento.js?v=1.6.0';
-import { escapeHTML, stripHTML } from '../utils/text.js?v=1.4.0';
-import { isScheduled, isDone, habitStreak } from '../utils/habits.js?v=1.4.0';
+import { escapeHTML, stripHTML, formatDateDMY } from '../utils/text.js?v=4.3.0';
+import { isScheduled, isDone, normalizeHabit } from '../utils/habits.js?v=3.3.0';
+
+const DECALOGUE = [
+  'Habla con una voz profunda y lenta',
+  'Apégate a tus hábitos diarios',
+  'Haz ejercicios regularmente para mantenerte en forma',
+  'Conecta con personas en las que te quieres convertir',
+  'Consume contenido que te ayude a mejorar',
+  'Evita quejarte, en lugar de eso, enfócate en encontrar soluciones',
+  'El mundo no te debe nada y tú no le debes nada',
+  'Viste siempre bien. Usa ropa oscura que te haga sentir con confianza',
+  'Usa una colonia atractiva y masculina',
+  'Manten una actitud seria y misteriosa. No seas un libro abierto'
+];
 
 const WORLD_CLOCKS = [
   { id: 'nyc', label: 'Nueva York', tz: 'America/New_York' },
@@ -90,18 +103,26 @@ export function renderDashboard(container) {
 
   // 3. Lectura en curso
   const activeBook = store.books.find(b => b.status === 'Leyendo') || store.books[0];
-  const bookPct = activeBook && activeBook.totalPages > 0
-    ? Math.min(100, Math.round((activeBook.currentPage / activeBook.totalPages) * 100))
-    : 0;
 
   // 4. Finanzas
+  const fin = store.finance;
+  const accounts = fin?.accounts;
+  const totalTengo = accounts
+    ? ['bank', 'binance', 'bolivares', 'cash', 'other'].reduce((acc, k) => acc + (Number(accounts[k]) || 0), 0)
+    : null;
+  const totalObligations = fin
+    ? (fin.projectedExpenses || []).reduce((a, b) => a + (Number(b.amount) || 0), 0)
+      + (fin.debts || []).reduce((a, b) => a + (Number(b.amount) || 0), 0)
+    : 0;
+  const realMoney = totalTengo !== null ? totalTengo - totalObligations : null;
+
   const totalIncome = store.transactions
     .filter(t => t.type === 'income')
     .reduce((acc, t) => acc + Number(t.amount || 0), 0);
   const totalExpense = store.transactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => acc + Number(t.amount || 0), 0);
-  const balance = totalIncome - totalExpense;
+  const balance = totalTengo !== null ? totalTengo : (totalIncome - totalExpense);
   const currency = store.profile.currency || 'USD';
 
   // 5. Última entrada del diario
@@ -198,59 +219,69 @@ export function renderDashboard(container) {
         <div class="kpi-value" style="font-size:0.96rem;font-family:var(--font-sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           ${activeBook ? activeBook.title : 'Sin lectura activa'}
         </div>
-        <div class="progress-track">
-          <div class="progress-fill" style="width: ${bookPct}%"></div>
-        </div>
         <div class="kpi-meta">
-          ${activeBook ? `<span class="badge badge-silver">${activeBook.modality}</span> <span class="mono">${bookPct}% (${activeBook.currentPage}/${activeBook.totalPages})</span>` : 'Agrega un libro en #/reading'}
+          ${activeBook ? `<span class="badge badge-silver">${activeBook.modality}</span> <span class="mono">${activeBook.status}</span>` : 'Agrega un libro en #/reading'}
         </div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-top">
-          <span>Balance Neto</span>
+          <span>${realMoney !== null ? 'Disponible para gastar' : 'Balance Neto'}</span>
           ${icon('finance')}
         </div>
-        <div class="kpi-value">${currency} ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+        <div class="kpi-value ${realMoney !== null ? (realMoney >= 0 ? 'text-success' : 'text-danger') : ''}">
+          ${currency} ${Math.round(realMoney !== null ? realMoney : balance).toLocaleString('en-US')}
+        </div>
         <div class="kpi-meta">
-          <span class="text-success mono">+${totalIncome.toLocaleString('en-US')}</span>
-          <span>/</span>
-          <span class="text-danger mono">-${totalExpense.toLocaleString('en-US')}</span>
+          ${realMoney !== null
+            ? `Dinero ahorita: <span class="mono">${currency} ${Math.round(totalTengo).toLocaleString('en-US')}</span>`
+            : `<span class="text-success mono">+${Math.round(totalIncome).toLocaleString('en-US')}</span> <span>/</span> <span class="text-danger mono">-${Math.round(totalExpense).toLocaleString('en-US')}</span>`}
         </div>
       </div>
     </section>
 
-    <div class="grid-2">
-      <!-- Check-in rápido de hábitos -->
-      <section class="card">
-        <div class="card-header">
-          <h2 class="card-title">${icon('habits')} Check-in Rápido de Hoy</h2>
-          <a href="#/habits" class="btn btn-ghost btn-sm">Panel completo →</a>
-        </div>
-        <div id="dash-habits-list">
-          ${todayHabits.length === 0 ? `<div class="empty-state">Hoy no tienes hábitos programados.</div>` : ''}
-          ${todayHabits.map(h => {
-            const done = isDone(h, today);
-            return `
-              <div class="habit-row">
-                <div style="display:flex;align-items:center;gap:10px;">
-                  <button type="button" class="habit-check-btn ${done ? 'done' : ''}" data-habit-id="${h.id}" aria-label="Marcar hábito">
-                    ${icon('check')}
-                  </button>
-                  <div>
-                    <div style="font-weight:500;font-size:0.82rem;${done ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${escapeHTML(h.name)}</div>
-                    <span class="badge" style="margin-top:3px;">${escapeHTML(h.category)}</span>
-                  </div>
-                </div>
-                <span class="mono text-secondary" style="font-size:0.72rem;">${habitStreak(h, today)}d</span>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </section>
+    <!-- Decálogo Personal -->
+    <section class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <h2 class="card-title">${icon('shield')} Decálogo Personal</h2>
+        <span class="cyber-tag">CODE.10</span>
+      </div>
+      <ol class="decalogue-grid">
+        ${DECALOGUE.map((rule, idx) => `
+          <li class="decalogue-item">
+            <span class="decalogue-num mono">${String(idx + 1).padStart(2, '0')}</span>
+            <span class="decalogue-text">${escapeHTML(rule)}</span>
+          </li>
+        `).join('')}
+      </ol>
+    </section>
 
-      <!-- Columna derecha del contenido: Lectura + Diario -->
-      <div style="display:flex;flex-direction:column;gap:16px;">
+    <!-- Check-in rápido de hábitos a todo el ancho -->
+    <section class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <h2 class="card-title">${icon('habits')} Check-in Rápido de Hoy</h2>
+        <a href="#/habits" class="btn btn-ghost btn-sm">Panel completo →</a>
+      </div>
+      <div id="dash-habits-list" class="dash-habits-strip">
+        ${todayHabits.length === 0 ? `<div class="empty-state">Hoy no tienes hábitos programados.</div>` : ''}
+        ${todayHabits.map(rawHabit => {
+          const h = normalizeHabit({ ...rawHabit }, today);
+          const done = isDone(h, today);
+          return `
+            <div class="dash-habit-chip ${done ? 'done' : ''}">
+              <button type="button" class="habit-check-btn ${done ? 'done' : ''}" data-habit-id="${h.id}" aria-label="Marcar ${escapeHTML(h.name)}">
+                ${icon('check')}
+              </button>
+              <span class="dash-habit-icon" aria-hidden="true">${icon(h.icon || 'habits')}</span>
+              <span class="dash-habit-name">${escapeHTML(h.name)}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <!-- Lectura + Diario -->
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">${icon('reading')} Libro en Curso</h2>
@@ -267,7 +298,7 @@ export function renderDashboard(container) {
                   <div class="book-author">${activeBook.author}</div>
                   <div class="book-badges">
                     <span class="badge badge-silver">${activeBook.modality}</span>
-                    <span class="badge mono">Inicio: ${activeBook.startDate || 'N/A'}</span>
+                    <span class="badge mono">Inicio: ${activeBook.startDate ? formatDateDMY(activeBook.startDate) : 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -285,7 +316,7 @@ export function renderDashboard(container) {
             <div>
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
                 <strong style="font-size:0.84rem;font-weight:500;">${latestJournal.title}</strong>
-                <span class="badge mono">${latestJournal.date}</span>
+                <span class="badge mono">${formatDateDMY(latestJournal.date)}</span>
               </div>
               <p class="text-secondary" style="font-size:0.8rem;line-height:1.5;">${(() => {
                 const plain = stripHTML(latestJournal.content || '');
@@ -294,7 +325,6 @@ export function renderDashboard(container) {
             </div>
           ` : `<div class="empty-state">Aún no hay entradas en el diario.</div>`}
         </section>
-      </div>
     </div>
   `;
 

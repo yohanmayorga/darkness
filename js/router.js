@@ -1,14 +1,16 @@
-import { renderDashboard } from './modules/dashboard.js?v=2.4.0';
-import { renderHabits } from './modules/habits.js?v=2.1.0';
-import { renderBody } from './modules/body.js?v=2.6.0';
-import { renderReading } from './modules/reading.js?v=2.6.0';
+import { renderDashboard } from './modules/dashboard.js?v=4.8.0';
+import { renderHabits } from './modules/habits.js?v=5.1.0';
+import { renderTasks } from './modules/tasks.js?v=5.3.0';
+import { renderBody } from './modules/body.js?v=5.3.0';
+import { renderReading } from './modules/reading.js?v=5.5.0';
 import { renderJournal } from './modules/journal.js?v=2.6.0';
-import { renderFinance } from './modules/finance.js?v=2.6.0';
-import { renderSettings } from './modules/settings.js?v=2.6.0';
+import { renderFinance } from './modules/finance.js?v=5.6.0';
+import { renderSettings } from './modules/settings.js?v=5.2.0';
 
 const ROUTES = {
   '/dashboard': renderDashboard,
   '/habits': renderHabits,
+  '/tasks': renderTasks,
   '/body': renderBody,
   '/reading': renderReading,
   '/journal': renderJournal,

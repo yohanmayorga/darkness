@@ -1,6 +1,6 @@
-import { initRouter, getActiveRoute } from './router.js?v=2.6.0';
-import { getStore, isSupabaseConfigured } from './services/db.js?v=2.4.0';
-import { icon } from './components/icons.js?v=1.4.0';
+import { initRouter, getActiveRoute } from './router.js?v=5.6.0';
+import { getStore, isSupabaseConfigured, pullFromSupabase } from './services/db.js?v=5.2.0';
+import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
 
 const THEME_KEY = 'darkness_theme';
@@ -9,6 +9,7 @@ const SIDEBAR_KEY = 'darkness_sidebar_collapsed';
 const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', shortLabel: 'Inicio', icon: 'dashboard' },
   { path: '/habits', label: 'Hábitos', shortLabel: 'Hábitos', icon: 'habits' },
+  { path: '/tasks', label: 'Tareas', shortLabel: 'Tareas', icon: 'list' },
   { path: '/body', label: 'Cuerpo & Peso', shortLabel: 'Cuerpo', icon: 'body' },
   { path: '/reading', label: 'Lectura', shortLabel: 'Lectura', icon: 'reading' },
   { path: '/journal', label: 'Diario', shortLabel: 'Diario', icon: 'journal' },
@@ -152,7 +153,18 @@ function initShell() {
     shell?.classList.remove('focus-mode');
   });
 
-  // 8. Escape: cierra Memento Mori móvil y sale del modo enfoque
+  // 8. Sincronización automática desde la nube al abrir la página (sin pedir login de nuevo)
+  if (isSupabaseConfigured()) {
+    pullFromSupabase().then(res => {
+      if (res?.ok) {
+        updateUserFooter();
+        renderMementoSidebar();
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      }
+    }).catch(() => {});
+  }
+
+  // 9. Escape: cierra Memento Mori móvil y sale del modo enfoque
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     shell?.classList.remove('memento-open');

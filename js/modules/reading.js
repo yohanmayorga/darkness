@@ -1,10 +1,14 @@
-import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=1.4.0';
+import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=5.2.0';
 import { icon } from '../components/icons.js?v=1.4.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
+import { formatDateDMY, escapeHTML } from '../utils/text.js?v=4.3.0';
 
 let activeFilter = 'Todos';
+let activeModality = 'Todos';
+let searchQuery = '';
+let sortBy = 'date_desc';
 const calState = { year: null, month: null, selectedDate: '' };
 
 function calculateDaysBetween(start, end) {
@@ -28,13 +32,103 @@ export function renderReading(container) {
 
   const readingCount = books.filter(b => b.status === 'Leyendo').length;
   const finishedCount = books.filter(b => b.status === 'Terminado').length;
-  const totalPagesRead = books.reduce((acc, b) => acc + Number(b.currentPage || 0), 0);
 
-  const filteredBooks = activeFilter === 'Todos'
-    ? books
-    : books.filter(b => b.status === activeFilter);
+  const getFilteredAndSortedBooks = () => {
+    const q = searchQuery.trim().toLowerCase();
+    const list = books.filter(b => {
+      if (activeFilter !== 'Todos' && b.status !== activeFilter) return false;
+      if (activeModality !== 'Todos' && b.modality !== activeModality) return false;
+      if (q) {
+        const haystack = `${b.title || ''} ${b.author || ''} ${b.comments || ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    });
 
+    return [...list].sort((a, b) => {
+      const dateA = a.endDate || a.startDate || '';
+      const dateB = b.endDate || b.startDate || '';
+      if (sortBy === 'date_desc') return dateB.localeCompare(dateA);
+      if (sortBy === 'date_asc') return dateA.localeCompare(dateB);
+      if (sortBy === 'rating_desc') return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      if (sortBy === 'rating_asc') return (Number(a.rating) || 0) - (Number(b.rating) || 0);
+      if (sortBy === 'days_asc') {
+        const da = calculateDaysBetween(a.startDate, a.endDate) ?? 99999;
+        const db = calculateDaysBetween(b.startDate, b.endDate) ?? 99999;
+        return da - db;
+      }
+      if (sortBy === 'days_desc') {
+        const da = calculateDaysBetween(a.startDate, a.endDate) ?? -1;
+        const db = calculateDaysBetween(b.startDate, b.endDate) ?? -1;
+        return db - da;
+      }
+      if (sortBy === 'modality') return String(a.modality || '').localeCompare(String(b.modality || ''));
+      if (sortBy === 'title') return String(a.title || '').localeCompare(String(b.title || ''));
+      return 0;
+    });
+  };
+
+  const renderBooksGridHTML = (list) => {
+    if (list.length === 0) {
+      return `
+        <div class="card empty-state">
+          <p>No hay libros que coincidan con los filtros actuales.</p>
+        </div>
+      `;
+    }
+    return `
+      <div class="grid-3">
+        ${list.map(book => {
+          const daysSpent = calculateDaysBetween(book.startDate, book.endDate);
+          const stars = book.rating > 0 ? `★ ${book.rating}/10` : 'Sin calificar';
+
+          return `
+            <article class="card book-card">
+              <div>
+                <div class="book-header">
+                  <div class="book-cover">
+                    ${book.coverUrl ? `<img src="${book.coverUrl}" alt="${escapeHTML(book.title)}"/>` : `<span>${escapeHTML((book.modality || 'LIB').slice(0, 3).toUpperCase())}</span>`}
+                  </div>
+                  <div class="book-info">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                      <h3 class="book-title">${escapeHTML(book.title)}</h3>
+                      <span class="badge ${book.status === 'Terminado' ? 'badge-success' : 'badge-silver'}">${escapeHTML(book.status)}</span>
+                    </div>
+                    <div class="book-author">${escapeHTML(book.author)}</div>
+                    <div class="book-badges">
+                      <span class="badge badge-silver">${escapeHTML(book.modality)}</span>
+                      <span class="badge mono">${stars}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-top:12px;" class="mono text-muted">
+                  <span>Inicio: ${book.startDate ? formatDateDMY(book.startDate) : '—'}</span>
+                  <span>Fin: ${book.endDate ? formatDateDMY(book.endDate) : 'En curso'}</span>
+                  ${daysSpent ? `<span>(${daysSpent}d)</span>` : ''}
+                </div>
+
+                ${book.comments ? `<div class="book-notes" style="margin-top:12px;">${escapeHTML(book.comments)}</div>` : ''}
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border-subtle);">
+                <button type="button" class="btn btn-secondary btn-sm" data-edit-book="${book.id}">
+                  ${icon('edit')} Editar / Notas
+                </button>
+                <button type="button" class="btn-icon" data-delete-book="${book.id}" title="Eliminar libro">
+                  ${icon('trash')}
+                </button>
+              </div>
+            </article>
+          `;
+        }).join('')}
+      </div>
+    `;
+  };
+
+  const filteredBooks = getFilteredAndSortedBooks();
   const statuses = ['Todos', 'Leyendo', 'Terminado', 'Por leer', 'Pausado'];
+  const modalities = ['Todos', 'Físico', 'Kindle', 'Audiolibro', 'PDF/Digital'];
 
   container.innerHTML = `
     <header class="page-header">
@@ -61,14 +155,9 @@ export function renderReading(container) {
         <div class="kpi-value">${finishedCount}</div>
         <div class="kpi-meta">Completados en tu biblioteca</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-top"><span>Páginas Acumuladas</span>${icon('reading')}</div>
-        <div class="kpi-value">${totalPagesRead.toLocaleString('en-US')}</div>
-        <div class="kpi-meta">Volumen total registrado</div>
-      </div>
     </section>
 
-    <div class="filter-tabs">
+    <div class="filter-tabs" style="margin-bottom:10px;">
       ${statuses.map(st => `
         <button type="button" class="filter-tab ${activeFilter === st ? 'active' : ''}" data-filter-status="${st}">
           ${st}
@@ -76,71 +165,29 @@ export function renderReading(container) {
       `).join('')}
     </div>
 
-    ${filteredBooks.length === 0 ? `
-      <div class="card empty-state">
-        <p>No hay libros en la categoría "${activeFilter}".</p>
+    <div class="card" style="padding:10px 12px;margin-bottom:16px;">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input type="search" id="reading-search" class="form-input" value="${escapeHTML(searchQuery)}" placeholder="Buscar libro, autor o nota..." style="flex:1 1 200px;min-height:36px;padding:5px 10px;font-size:0.84rem;" aria-label="Buscar libros" />
+        <select id="reading-modality-filter" class="form-select" style="width:auto;min-height:36px;padding:5px 10px;font-size:0.82rem;" aria-label="Filtrar por formato">
+          ${modalities.map(m => `<option value="${m}" ${activeModality === m ? 'selected' : ''}>${m === 'Todos' ? 'Todos los formatos' : m}</option>`).join('')}
+        </select>
+        <select id="reading-sort" class="form-select" style="width:auto;min-height:36px;padding:5px 10px;font-size:0.82rem;" aria-label="Ordenar libros">
+          <option value="date_desc" ${sortBy === 'date_desc' ? 'selected' : ''}>Orden: Fecha (más reciente)</option>
+          <option value="date_asc" ${sortBy === 'date_asc' ? 'selected' : ''}>Orden: Fecha (más antiguo)</option>
+          <option value="rating_desc" ${sortBy === 'rating_desc' ? 'selected' : ''}>Orden: Calificación (mayor)</option>
+          <option value="rating_asc" ${sortBy === 'rating_asc' ? 'selected' : ''}>Orden: Calificación (menor)</option>
+          <option value="days_asc" ${sortBy === 'days_asc' ? 'selected' : ''}>Orden: Tiempo (más rápido)</option>
+          <option value="days_desc" ${sortBy === 'days_desc' ? 'selected' : ''}>Orden: Tiempo (más largo)</option>
+          <option value="modality" ${sortBy === 'modality' ? 'selected' : ''}>Orden: Formato</option>
+          <option value="title" ${sortBy === 'title' ? 'selected' : ''}>Orden: Título (A–Z)</option>
+        </select>
+        <button type="button" class="btn btn-ghost btn-sm" id="reading-reset-filters">Limpiar</button>
       </div>
-    ` : `
-      <div class="grid-3">
-        ${filteredBooks.map(book => {
-          const pct = book.totalPages > 0
-            ? Math.min(100, Math.round((book.currentPage / book.totalPages) * 100))
-            : 0;
-          const daysSpent = calculateDaysBetween(book.startDate, book.endDate);
-          const stars = book.rating > 0 ? '★'.repeat(book.rating) + '☆'.repeat(5 - book.rating) : 'Sin calificar';
+    </div>
 
-          return `
-            <article class="card book-card">
-              <div>
-                <div class="book-header">
-                  <div class="book-cover">
-                    ${book.coverUrl ? `<img src="${book.coverUrl}" alt="${book.title}"/>` : `<span>${book.modality.slice(0, 3).toUpperCase()}</span>`}
-                  </div>
-                  <div class="book-info">
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-                      <h3 class="book-title">${book.title}</h3>
-                      <span class="badge ${book.status === 'Terminado' ? 'badge-success' : 'badge-silver'}">${book.status}</span>
-                    </div>
-                    <div class="book-author">${book.author}</div>
-                    <div class="book-badges">
-                      <span class="badge badge-silver">${book.modality}</span>
-                      <span class="badge mono">${stars}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div style="margin-top:14px;">
-                  <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:5px;" class="mono text-secondary">
-                    <span>Progreso: ${book.currentPage} / ${book.totalPages} págs</span>
-                    <span>${pct}%</span>
-                  </div>
-                  <div class="progress-track">
-                    <div class="progress-fill" style="width:${pct}%"></div>
-                  </div>
-                </div>
-
-                <div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-top:12px;" class="mono text-muted">
-                  <span>Inicio: ${book.startDate || '—'}</span>
-                  <span>Fin: ${book.endDate || 'En curso'}</span>
-                  ${daysSpent ? `<span>(${daysSpent}d)</span>` : ''}
-                </div>
-
-                ${book.comments ? `<div class="book-notes" style="margin-top:12px;">${book.comments}</div>` : ''}
-              </div>
-
-              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--border-subtle);">
-                <button type="button" class="btn btn-secondary btn-sm" data-edit-book="${book.id}">
-                  ${icon('edit')} Editar / Notas
-                </button>
-                <button type="button" class="btn-icon" data-delete-book="${book.id}" title="Eliminar libro">
-                  ${icon('trash')}
-                </button>
-              </div>
-            </article>
-          `;
-        }).join('')}
-      </div>
-    `}
+    <div id="reading-books-grid">
+      ${renderBooksGridHTML(filteredBooks)}
+    </div>
 
     <aside class="section-aside" aria-label="Calendario y resumen de lectura">
       <section class="card habit-calendar" id="reading-calendar" aria-label="Calendario de lectura">
@@ -167,7 +214,7 @@ export function renderReading(container) {
           <span class="cyber-tag">LIB</span>
         </div>
         <p class="body-summary-text">
-          Tienes <strong class="mono">${readingCount}</strong> libro(s) en curso, <strong class="mono">${finishedCount}</strong> terminado(s) y <strong class="mono">${totalPagesRead.toLocaleString('en-US')}</strong> páginas acumuladas en tu biblioteca.
+          Tienes <strong class="mono">${readingCount}</strong> libro(s) en curso y <strong class="mono">${finishedCount}</strong> terminado(s) en tu biblioteca.
         </p>
       </section>
     </aside>
@@ -179,7 +226,39 @@ export function renderReading(container) {
     onChange: () => renderReading(container)
   });
 
-  // Filtros
+  // Filtros, búsqueda y ordenamiento
+  const bindBookCardActions = () => {
+    container.querySelectorAll('[data-delete-book]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-delete-book');
+        const current = getStore();
+        const target = current.books.find(b => b.id === id);
+        if (!target) return;
+        if (!window.confirm(`¿Estás seguro de borrar el libro "${target.title}"?`)) return;
+        current.books = current.books.filter(b => b.id !== id);
+        saveStore(current);
+        showToast('Libro eliminado');
+        renderReading(container);
+      });
+    });
+
+    container.querySelectorAll('[data-edit-book]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-edit-book');
+        const target = getStore().books.find(b => b.id === id);
+        if (target) openBookForm(target);
+      });
+    });
+  };
+
+  const refreshBooksGrid = () => {
+    const grid = container.querySelector('#reading-books-grid');
+    if (grid) {
+      grid.innerHTML = renderBooksGridHTML(getFilteredAndSortedBooks());
+      bindBookCardActions();
+    }
+  };
+
   container.querySelectorAll('[data-filter-status]').forEach(btn => {
     btn.addEventListener('click', () => {
       activeFilter = btn.getAttribute('data-filter-status');
@@ -187,17 +266,30 @@ export function renderReading(container) {
     });
   });
 
-  // Eliminar libro
-  container.querySelectorAll('[data-delete-book]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-delete-book');
-      const current = getStore();
-      current.books = current.books.filter(b => b.id !== id);
-      saveStore(current);
-      showToast('Libro eliminado');
-      renderReading(container);
-    });
+  container.querySelector('#reading-search')?.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    refreshBooksGrid();
   });
+
+  container.querySelector('#reading-modality-filter')?.addEventListener('change', (e) => {
+    activeModality = e.target.value;
+    refreshBooksGrid();
+  });
+
+  container.querySelector('#reading-sort')?.addEventListener('change', (e) => {
+    sortBy = e.target.value;
+    refreshBooksGrid();
+  });
+
+  container.querySelector('#reading-reset-filters')?.addEventListener('click', () => {
+    activeFilter = 'Todos';
+    activeModality = 'Todos';
+    searchQuery = '';
+    sortBy = 'date_desc';
+    renderReading(container);
+  });
+
+  bindBookCardActions();
 
   // Abrir modal para crear o editar libro
   const openBookForm = (existingBook = null) => {
@@ -208,8 +300,6 @@ export function renderReading(container) {
       status: 'Leyendo',
       startDate: todayISO(),
       endDate: '',
-      currentPage: 0,
-      totalPages: 250,
       rating: 5,
       comments: '',
       coverUrl: ''
@@ -241,8 +331,8 @@ export function renderReading(container) {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Calificación (0 a 5 ★)</label>
-              <input type="number" name="rating" min="0" max="5" class="form-input" value="${b.rating ?? 5}" />
+              <label class="form-label">Calificación (1 a 10 ★)</label>
+              <input type="number" name="rating" min="0" max="10" class="form-input" value="${b.rating ?? 8}" />
             </div>
             <div class="form-group">
               <label class="form-label">Fecha de Inicio</label>
@@ -251,14 +341,6 @@ export function renderReading(container) {
             <div class="form-group">
               <label class="form-label">Fecha de Fin</label>
               <input type="date" name="endDate" class="form-input" value="${b.endDate || ''}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Página / Progreso Actual</label>
-              <input type="number" name="currentPage" min="0" class="form-input" value="${b.currentPage || 0}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Total de Páginas (o 100 para %)</label>
-              <input type="number" name="totalPages" min="1" class="form-input" value="${b.totalPages || 100}" required />
             </div>
             <div class="form-group full">
               <label class="form-label">Portada (subir imagen opcional)</label>
@@ -285,13 +367,10 @@ export function renderReading(container) {
           const uploadedCover = file ? await fileToDataUrl(file) : b.coverUrl;
 
           const statusVal = String(fd.get('status'));
-          const totalP = Number(fd.get('totalPages')) || 100;
-          let currP = Number(fd.get('currentPage')) || 0;
           let endD = String(fd.get('endDate') || '');
 
-          if (statusVal === 'Terminado') {
-            currP = totalP;
-            if (!endD) endD = todayISO();
+          if (statusVal === 'Terminado' && !endD) {
+            endD = todayISO();
           }
 
           const bookData = {
@@ -302,8 +381,6 @@ export function renderReading(container) {
             status: statusVal,
             startDate: String(fd.get('startDate') || ''),
             endDate: endD,
-            currentPage: currP,
-            totalPages: totalP,
             rating: Number(fd.get('rating')) || 0,
             comments: String(fd.get('comments') || '').trim(),
             coverUrl: uploadedCover
@@ -327,12 +404,4 @@ export function renderReading(container) {
 
   const newBookBtn = container.querySelector('#btn-new-book');
   if (newBookBtn) newBookBtn.addEventListener('click', () => openBookForm(null));
-
-  container.querySelectorAll('[data-edit-book]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-edit-book');
-      const target = store.books.find(b => b.id === id);
-      if (target) openBookForm(target);
-    });
-  });
 }

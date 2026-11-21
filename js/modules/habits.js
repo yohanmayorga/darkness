@@ -1,16 +1,16 @@
-import { getStore, saveStore, generateId, todayISO } from '../services/db.js?v=1.4.0';
-import { icon } from '../components/icons.js?v=1.4.0';
+import { getStore, saveStore, generateId, todayISO } from '../services/db.js?v=4.8.0';
+import { icon } from '../components/icons.js?v=3.3.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { escapeHTML } from '../utils/text.js?v=1.4.0';
 import {
   addDays, parseISO, isValidISO,
   ALL_DAYS, WORK_DAYS, WEEKEND_DAYS, WEEK_ORDER, DAY_SHORT, DAY_LETTER,
-  TIME_OF_DAY, TIME_ORDER, HABIT_CATEGORIES,
+  TIME_OF_DAY, TIME_ORDER, HABIT_CATEGORIES, HABIT_ICONS,
   isScheduled, isDone, offReason, dayStats, rangeSeries, aggregate,
   habitRate, habitStreak, bestStreak,
   formatShort, formatLong, scheduleLabel, pctText, generateAdvice
-} from '../utils/habits.js?v=1.4.0';
+} from '../utils/habits.js?v=4.9.0';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const CAL_WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -22,7 +22,7 @@ const RANGES = [
 ];
 
 // Estado de la vista mientras navegas por la app
-const state = { selectedDate: null, calYear: null, calMonth: null, range: 30 };
+const state = { selectedDate: null, calYear: null, calMonth: null, range: 'all' };
 
 const esc = v => escapeHTML(String(v ?? ''));
 
@@ -49,6 +49,7 @@ export function renderHabits(container) {
         <p class="page-subtitle">Sólo cuentan los hábitos programados para cada día: si hoy no toca, no penaliza tu porcentaje.</p>
       </div>
       <div class="page-actions">
+        <button type="button" class="btn btn-secondary" id="btn-manage-habits">${icon('settings')} Gestionar hábitos</button>
         <button type="button" class="btn btn-primary" id="btn-new-habit">${icon('plus')} Nuevo hábito</button>
       </div>
     </header>
@@ -72,7 +73,7 @@ export function renderHabits(container) {
       <section class="card habit-day">${buildDayPanel(habits, today)}</section>
       <aside class="habit-aside">
         <section class="card habit-calendar" aria-label="Calendario de cumplimiento">${buildCalendar(habits, today)}</section>
-        <section class="card habit-manage">${buildManager(habits, today)}</section>
+        <section class="card habit-summary-card" aria-label="Resumen general de hábitos">${buildHabitsSummary(habits, today)}</section>
       </aside>
     </div>
   `;
@@ -123,6 +124,11 @@ function buildChart(habits, today) {
       : `${formatShort(d.iso)} · ${d.done}/${d.total} · ${pctText(d.pct)}`;
     const cls = ['hc-bar'];
     if (d.pct === 1) cls.push('is-full');
+    if (d.pct !== null) {
+      if (d.pct >= 0.8) cls.push('is-high');
+      else if (d.pct >= 0.4) cls.push('is-mid');
+      else cls.push('is-low');
+    }
     if (d.iso === state.selectedDate) cls.push('is-selected');
     let bar = '';
     if (d.pct !== null) {
@@ -146,6 +152,20 @@ function buildChart(habits, today) {
       <div class="hc-yaxis mono" aria-hidden="true"><span>100%</span><span>50%</span><span>0%</span></div>
       <div class="hc-plot">
         <svg class="hc-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cumplimiento diario">
+          <defs>
+            <linearGradient id="hc-grad-high" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="var(--status-success-bg)" />
+              <stop offset="100%" stop-color="var(--status-success)" />
+            </linearGradient>
+            <linearGradient id="hc-grad-mid" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="var(--cyber-yellow-border)" />
+              <stop offset="100%" stop-color="var(--cyber-yellow)" />
+            </linearGradient>
+            <linearGradient id="hc-grad-low" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="var(--status-danger-bg)" />
+              <stop offset="100%" stop-color="var(--status-danger)" />
+            </linearGradient>
+          </defs>
           <line class="hc-grid" x1="0" y1="0.5" x2="${W}" y2="0.5"/>
           <line class="hc-grid" x1="0" y1="${H / 2}" x2="${W}" y2="${H / 2}"/>
           <line class="hc-grid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}"/>
@@ -177,6 +197,13 @@ function buildAdvice(habits, today) {
 /* ==========================================================================
    KPIs
    ========================================================================== */
+function complianceClass(pct) {
+  if (pct === null || pct === undefined) return '';
+  if (pct >= 0.8) return 'kpi-lvl-high';
+  if (pct >= 0.4) return 'kpi-lvl-mid';
+  return 'kpi-lvl-low';
+}
+
 function buildKpis(habits, today) {
   const t = dayStats(habits, today);
   const w = aggregate(rangeSeries(habits, addDays(today, -6), today));
@@ -186,30 +213,81 @@ function buildKpis(habits, today) {
     .map(h => ({ h, s: habitStreak(h, today) }))
     .sort((a, b) => b.s - a.s);
   const top = streaks[0];
+  const streakCls = !top || top.s === 0 ? 'kpi-lvl-low' : top.s >= 14 ? 'kpi-lvl-high' : top.s >= 5 ? 'kpi-lvl-mid' : '';
 
   return `
     <section class="grid-kpi">
-      <div class="kpi-card">
+      <div class="kpi-card ${complianceClass(t.pct)}">
         <div class="kpi-top"><span>Hoy</span>${icon('habits')}</div>
         <div class="kpi-value">${t.total ? `${t.done}/${t.total}` : '—'} <small class="kpi-small">${pctText(t.pct)}</small></div>
         <div class="progress-track"><div class="progress-fill" style="width:${Math.round((t.pct || 0) * 100)}%"></div></div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card ${complianceClass(w.rate)}">
         <div class="kpi-top"><span>Últimos 7 días</span>${icon('calendar')}</div>
         <div class="kpi-value">${pctText(w.rate)}</div>
         <div class="kpi-meta"><span class="mono">${w.done}/${w.total}</span> cumplidos</div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card ${complianceClass(m.rate)}">
         <div class="kpi-top"><span>Últimos 30 días</span>${icon('calendar')}</div>
         <div class="kpi-value">${pctText(m.rate)}</div>
         <div class="kpi-meta"><span class="mono">${m.done}/${m.total}</span> cumplidos</div>
       </div>
-      <div class="kpi-card">
+      <div class="kpi-card ${streakCls}">
         <div class="kpi-top"><span>Mejor racha activa</span>${icon('flame')}</div>
         <div class="kpi-value">${top ? top.s : 0} <small class="kpi-small">días</small></div>
         <div class="kpi-meta">${top && top.s > 0 ? esc(top.h.name) : 'Sin racha activa'}</div>
       </div>
     </section>
+  `;
+}
+
+function buildHabitsSummary(habits, today) {
+  const header = `
+    <div class="card-header">
+      <h2 class="card-title">${icon('dashboard')} Resumen General</h2>
+      <span class="cyber-tag">HAB</span>
+    </div>
+  `;
+  if (!habits.length) {
+    return `${header}<p class="body-summary-text">Aún no tienes hábitos registrados. Crea uno con el botón superior.</p>`;
+  }
+
+  const todayScheduled = habits.filter(h => isScheduled(h, today));
+  const pendingToday = todayScheduled.filter(h => !isDone(h, today));
+  const t = dayStats(habits, today);
+  const w = aggregate(rangeSeries(habits, addDays(today, -6), today));
+  const m = aggregate(rangeSeries(habits, addDays(today, -29), today));
+
+  const weakest = habits
+    .filter(h => !h.endDate || h.endDate >= today)
+    .map(h => ({ h, rate: habitRate(h, 30, today).rate }))
+    .filter(x => x.rate !== null)
+    .sort((a, b) => a.rate - b.rate)[0];
+
+  const trendText = w.rate !== null && m.rate !== null
+    ? (w.rate >= m.rate
+      ? `Vas <strong class="mono text-success">+${Math.round((w.rate - m.rate) * 100)}%</strong> sobre tu media de 30 días.`
+      : `Estás <strong class="mono text-danger">${Math.round((w.rate - m.rate) * 100)}%</strong> bajo tu media de 30 días.`)
+    : 'Completa algunos días para analizar tu tendencia.';
+
+  return `
+    ${header}
+    <div class="habit-summary-metrics">
+      <p>
+        Hoy llevas <strong class="mono">${t.done}/${t.total}</strong> (<strong class="mono">${pctText(t.pct)}</strong>).
+        ${pendingToday.length === 0
+          ? '<span class="text-success">¡Día completado!</span>'
+          : `Te faltan <strong class="mono">${pendingToday.length}</strong> por marcar hoy:`}
+      </p>
+      ${pendingToday.length > 0 ? `
+        <div class="habit-summary-pending">
+          ${pendingToday.slice(0, 6).map(h => `<span class="badge badge-silver">${esc(h.name)}</span>`).join('')}
+          ${pendingToday.length > 6 ? `<span class="badge mono">+${pendingToday.length - 6}</span>` : ''}
+        </div>
+      ` : ''}
+      <p>${trendText}</p>
+      ${weakest ? `<p>Foco sugerido: <strong>${esc(weakest.h.name)}</strong> (<span class="mono">${pctText(weakest.rate)}</span> en 30D).</p>` : ''}
+    </div>
   `;
 }
 
@@ -259,6 +337,7 @@ function buildDayPanel(habits, today) {
         return `
           <button type="button" class="hday-item ${done ? 'done' : ''}" data-toggle-habit="${h.id}" aria-pressed="${done}">
             <span class="habit-check-btn ${done ? 'done' : ''}" aria-hidden="true">${icon('check')}</span>
+            <span class="hday-item-icon" aria-hidden="true">${icon(h.icon || 'habits')}</span>
             <span class="hday-item-body">
               <span class="hday-item-name">${esc(h.name)}</span>
               <span class="hday-item-meta">${meta}</span>
@@ -389,9 +468,10 @@ function buildManager(habits, today) {
 function openHabitForm(container, existing = null) {
   const today = todayISO();
   const h = existing || {
-    name: '', category: 'General', timeOfDay: 'anytime', target: '',
+    name: '', category: 'General', timeOfDay: 'anytime', target: '', icon: 'habits',
     days: [...ALL_DAYS], startDate: today, endDate: ''
   };
+  const currentIcon = h.icon || 'habits';
   const presets = [
     { key: 'all', label: 'Todos los días', days: ALL_DAYS },
     { key: 'work', label: 'Lunes a viernes', days: WORK_DAYS },
@@ -412,6 +492,17 @@ function openHabitForm(container, existing = null) {
         </div>
 
         <div class="form-group">
+          <span class="form-label">Ícono</span>
+          <div class="hf-icons" role="group" aria-label="Seleccionar ícono del hábito">
+            ${HABIT_ICONS.map(ic => `
+              <button type="button" class="hf-icon-btn ${currentIcon === ic.id ? 'on' : ''}" data-habit-icon="${ic.id}" title="${ic.label}" aria-label="${ic.label}" aria-pressed="${currentIcon === ic.id}">
+                ${icon(ic.id)}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="form-group">
           <span class="form-label">¿Qué días cuenta?</span>
           <div class="hf-presets">
             ${presets.map(p => `<button type="button" class="filter-tab" data-preset="${p.days.join(',')}">${p.label}</button>`).join('')}
@@ -426,11 +517,11 @@ function openHabitForm(container, existing = null) {
 
         <div class="form-grid">
           <div class="form-group">
-            <label class="form-label" for="hf-start">Cuenta desde</label>
+            <label class="form-label" for="hf-start">Cuenta desde <span class="mono text-muted" id="hf-start-dmy">(${formatShort(h.startDate)})</span></label>
             <input type="date" id="hf-start" name="startDate" class="form-input" value="${h.startDate}" required />
           </div>
           <div class="form-group">
-            <label class="form-label" for="hf-end">Hasta</label>
+            <label class="form-label" for="hf-end">Hasta <span class="mono text-muted" id="hf-end-dmy">${h.endDate ? `(${formatShort(h.endDate)})` : ''}</span></label>
             <input type="date" id="hf-end" name="endDate" class="form-input" value="${h.endDate}" ${h.endDate ? '' : 'disabled'} />
             <label class="hf-check">
               <input type="checkbox" id="hf-indef" ${h.endDate ? '' : 'checked'} /> Indefinido
@@ -448,11 +539,31 @@ function openHabitForm(container, existing = null) {
     onMount: modal => {
       const form = modal.querySelector('#form-habit');
       const dayBtns = [...modal.querySelectorAll('.hf-day')];
+      const iconBtns = [...modal.querySelectorAll('[data-habit-icon]')];
+      let selectedIcon = currentIcon;
+      iconBtns.forEach(btn => btn.addEventListener('click', () => {
+        selectedIcon = btn.dataset.habitIcon;
+        iconBtns.forEach(b => {
+          const active = b.dataset.habitIcon === selectedIcon;
+          b.classList.toggle('on', active);
+          b.setAttribute('aria-pressed', active);
+        });
+      }));
       const presetBtns = [...modal.querySelectorAll('[data-preset]')];
       const summary = modal.querySelector('#hf-days-summary');
+      const startInput = modal.querySelector('#hf-start');
+      const startDmy = modal.querySelector('#hf-start-dmy');
       const endInput = modal.querySelector('#hf-end');
+      const endDmy = modal.querySelector('#hf-end-dmy');
       const indef = modal.querySelector('#hf-indef');
       const errorEl = modal.querySelector('#hf-error');
+
+      startInput?.addEventListener('change', () => {
+        if (startDmy) startDmy.textContent = isValidISO(startInput.value) ? `(${formatShort(startInput.value)})` : '';
+      });
+      endInput?.addEventListener('change', () => {
+        if (endDmy) endDmy.textContent = isValidISO(endInput.value) ? `(${formatShort(endInput.value)})` : '';
+      });
 
       const selectedDays = () => dayBtns.filter(b => b.classList.contains('on')).map(b => Number(b.dataset.day));
       const syncDays = () => {
@@ -494,6 +605,7 @@ function openHabitForm(container, existing = null) {
 
         const data = {
           name,
+          icon: selectedIcon,
           category: existing?.category || 'General',
           timeOfDay: existing?.timeOfDay || 'anytime',
           target: String(fd.get('target') || '').trim(),
@@ -526,9 +638,35 @@ function selectDate(iso) {
   state.calMonth = d.getMonth();
 }
 
+function openManageHabitsModal(container, today) {
+  const habits = getStore().habits || [];
+  openModal({
+    title: 'Gestionar Hábitos',
+    contentHTML: `<div class="habit-manage-modal">${buildManager(habits, today)}</div>`,
+    onMount: (modal) => {
+      modal.querySelectorAll('[data-edit-habit]').forEach(btn => btn.addEventListener('click', () => {
+        const h = getStore().habits.find(x => x.id === btn.dataset.editHabit);
+        if (h) openHabitForm(container, h);
+      }));
+      modal.querySelectorAll('[data-delete-habit]').forEach(btn => btn.addEventListener('click', () => {
+        const current = getStore();
+        const h = current.habits.find(x => x.id === btn.dataset.deleteHabit);
+        if (!h) return;
+        if (!window.confirm(`¿Eliminar "${h.name}" y todo su historial? Si sólo quieres dejar de contarlo, edítalo y ponle fecha final.`)) return;
+        current.habits = current.habits.filter(x => x.id !== h.id);
+        saveStore(current);
+        showToast('Hábito eliminado');
+        closeModal();
+        renderHabits(container);
+      }));
+    }
+  });
+}
+
 function bindEvents(container, today) {
   const rerender = () => renderHabits(container);
 
+  container.querySelector('#btn-manage-habits')?.addEventListener('click', () => openManageHabitsModal(container, today));
   container.querySelector('#btn-new-habit')?.addEventListener('click', () => openHabitForm(container));
 
   container.querySelectorAll('[data-range]').forEach(btn => btn.addEventListener('click', () => {

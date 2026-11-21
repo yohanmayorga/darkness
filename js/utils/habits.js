@@ -41,11 +41,63 @@ export const TIME_ORDER = ['morning', 'anytime', 'night'];
 
 export const HABIT_CATEGORIES = ['Salud', 'Cuerpo', 'Mente', 'Cuidado personal', 'Descanso', 'Disciplina', 'Finanzas'];
 
+export const HABIT_ICONS = [
+  { id: 'habits', label: 'Check' },
+  { id: 'sparkles', label: 'Cuidado personal' },
+  { id: 'moon', label: 'Descanso / Noche' },
+  { id: 'sun', label: 'Mañana / Sol' },
+  { id: 'droplet', label: 'Agua / Hidratación' },
+  { id: 'coffee', label: 'Café / Mañana' },
+  { id: 'utensils', label: 'Alimentación' },
+  { id: 'apple', label: 'Nutrición' },
+  { id: 'dumbbell', label: 'Gimnasio' },
+  { id: 'footprints', label: 'Caminar / Pasos' },
+  { id: 'bike', label: 'Ciclismo / Cardio' },
+  { id: 'bed', label: 'Dormir' },
+  { id: 'reading', label: 'Lectura' },
+  { id: 'pen', label: 'Escribir / Diario' },
+  { id: 'brain', label: 'Mente / Enfoque' },
+  { id: 'ban', label: 'Evitar / Abstinencia' },
+  { id: 'flame', label: 'Racha / Fuego' },
+  { id: 'body', label: 'Salud / Pulso' },
+  { id: 'heart', label: 'Bienestar' },
+  { id: 'pill', label: 'Suplementos' },
+  { id: 'zap', label: 'Energía' },
+  { id: 'target', label: 'Meta' },
+  { id: 'clock', label: 'Tiempo' },
+  { id: 'alarm', label: 'Despertar / Alarma' },
+  { id: 'music', label: 'Música' },
+  { id: 'headphones', label: 'Audio / Podcast' },
+  { id: 'code', label: 'Programar' },
+  { id: 'laptop', label: 'Estudio / Trabajo' },
+  { id: 'briefcase', label: 'Trabajo' },
+  { id: 'dollar', label: 'Finanzas / Ahorro' },
+  { id: 'smile', label: 'Ánimo' },
+  { id: 'eye', label: 'Atención / Descanso visual' },
+  { id: 'shield', label: 'Disciplina' },
+  { id: 'star', label: 'Destacado' },
+  { id: 'award', label: 'Logro' },
+  { id: 'compass', label: 'Dirección' },
+  { id: 'leaf', label: 'Naturaleza / Aire libre' }
+];
+
+const DEFAULT_ICON_BY_ID = {
+  'hab-skin-am': 'sparkles',
+  'hab-sleep': 'moon',
+  'hab-water': 'droplet',
+  'hab-read': 'reading',
+  'hab-no-sugar': 'ban',
+  'hab-no-alcohol': 'ban',
+  'hab-gym': 'dumbbell',
+  'hab-skin-pm': 'sparkles'
+};
+
 /** Hábitos predeterminados de Darkness */
 export function createDefaultHabits(startDate) {
   const createdAt = new Date().toISOString();
   const make = (id, name, category, timeOfDay, days = ALL_DAYS, target = '') => ({
     id, name, category, timeOfDay, target,
+    icon: DEFAULT_ICON_BY_ID[id] || 'habits',
     days: [...days],
     startDate,
     endDate: '',
@@ -77,6 +129,7 @@ export function normalizeHabit(h, fallbackStart) {
   if (!TIME_OF_DAY[h.timeOfDay]) h.timeOfDay = 'anytime';
   if (typeof h.target !== 'string') h.target = '';
   if (!h.category) h.category = 'Salud';
+  if (!h.icon) h.icon = DEFAULT_ICON_BY_ID[h.id] || 'habits';
   return h;
 }
 
@@ -169,7 +222,7 @@ const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 's
 
 export function formatShort(iso) {
   const d = parseISO(iso);
-  return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${String(d.getFullYear()).slice(2)}`;
 }
 
 export function formatLong(iso) {

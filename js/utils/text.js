@@ -7,6 +7,14 @@ export function escapeHTML(str = '') {
   return String(str ?? '').replace(/[&<>"']/g, c => ESCAPE_MAP[c]);
 }
 
+/** Convierte YYYY-MM-DD a DD/MM/AA */
+export function formatDateDMY(iso) {
+  const s = String(iso || '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s || '—';
+  return `${m[3]}/${m[2]}/${m[1].slice(2)}`;
+}
+
 export function isHTML(str = '') {
   return /<\/?[a-z][\s\S]*>/i.test(String(str || ''));
 }

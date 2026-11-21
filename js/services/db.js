@@ -1,5 +1,5 @@
 import { SUPABASE_CONFIG } from '../config.example.js?v=1.4.0';
-import { createDefaultHabits, normalizeHabit } from '../utils/habits.js?v=1.4.0';
+import { createDefaultHabits, normalizeHabit } from '../utils/habits.js?v=3.3.0';
 
 const STORAGE_KEY = 'darkness_store_v1';
 const HABITS_SCHEMA = 2;
@@ -166,8 +166,8 @@ function getInitialStore() {
         date: today,
         type: 'income',
         amount: 3200.00,
-        category: 'Ingresos Principales',
-        account: 'Banco Principal',
+        category: 'Ingresos principales',
+        account: 'Banco',
         description: 'Ingreso mensual neto',
         attachmentData: ''
       },
@@ -176,9 +176,9 @@ function getInitialStore() {
         date: today,
         type: 'expense',
         amount: 420.00,
-        category: 'Alimentación & Suplementos',
-        account: 'Tarjeta Plata',
-        description: 'Compra mensual de mercado y proteína',
+        category: 'Alimentación',
+        account: 'Banco',
+        description: 'Compra mensual de mercado',
         attachmentData: ''
       },
       {
@@ -186,12 +186,31 @@ function getInitialStore() {
         date: today,
         type: 'expense',
         amount: 45.00,
-        category: 'Educación & Libros',
-        account: 'Tarjeta Plata',
-        description: 'Libros del mes y suscripción',
+        category: 'Gimnasio',
+        account: 'Efectivo',
+        description: 'Mensualidad gimnasio',
         attachmentData: ''
       }
-    ]
+    ],
+    finance: {
+      bankName: 'UNFCU',
+      bankCustomName: '',
+      accounts: {
+        bank: 0,
+        binance: 0,
+        bolivares: 0,
+        cash: 0,
+        other: 0
+      },
+      receivables: [],
+      projectedIncome: [],
+      projectedExpenses: [],
+      debts: []
+    },
+    taskLists: [
+      { id: 'list-general', name: 'General (Rápida)', isDefault: true, createdAt: today }
+    ],
+    tasks: []
   };
 }
 
@@ -223,6 +242,41 @@ export function getStore() {
     }
     if (!Array.isArray(parsed.habits)) parsed.habits = [];
     parsed.habits.forEach(h => normalizeHabit(h, todayISO()));
+
+    // Fusión automática de hábitos importados en inglés hacia los hábitos originales en español
+    const MERGE_ALIASES = {
+      'skin care (m)': 'Skin Care (diurno)',
+      'skin care (n)': 'Skin Care (nocturno)',
+      'water (3l)': 'Agua',
+      'reading': 'Leer',
+      'no sugar': 'No azúcar',
+      'no alcohol': 'No alcohol',
+      'gym': 'Gimnasio',
+      'sleep +7h': 'Dormir +7h'
+    };
+    let mergedAny = false;
+    const toRemove = new Set();
+    parsed.habits.forEach(dup => {
+      const targetName = MERGE_ALIASES[String(dup.name || '').trim().toLowerCase()];
+      if (!targetName) return;
+      const orig = parsed.habits.find(h => h.id !== dup.id && h.name.toLowerCase() === targetName.toLowerCase());
+      if (orig) {
+        orig.logs = { ...(dup.logs || {}), ...(orig.logs || {}) };
+        if (dup.startDate && (!orig.startDate || dup.startDate < orig.startDate)) {
+          orig.startDate = dup.startDate;
+        }
+        toRemove.add(dup.id);
+        mergedAny = true;
+      }
+    });
+    if (mergedAny) {
+      parsed.habits = parsed.habits.filter(h => !toRemove.has(h.id));
+      const gym = parsed.habits.find(h => h.id === 'hab-gym' || h.name.toLowerCase() === 'gimnasio');
+      if (gym) gym.days = [1, 2, 3, 4, 5];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      syncToSupabaseIfConfigured(parsed).catch(() => {});
+    }
+
     return parsed;
   } catch (e) {
     console.error('Error leyendo store local:', e);
@@ -242,12 +296,22 @@ export function saveStore(store) {
 /**
  * Configuración de Supabase
  */
+function normalizeSupabaseUrl(raw) {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return '';
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed.replace(/\/+$/, '');
+  }
+}
+
 export function getSupabaseConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(SUPA_CFG_KEY) || '{}');
     return {
-      url: saved.url || SUPABASE_CONFIG.url || '',
-      anonKey: saved.anonKey || SUPABASE_CONFIG.anonKey || ''
+      url: normalizeSupabaseUrl(saved.url || SUPABASE_CONFIG.url || ''),
+      anonKey: String(saved.anonKey || SUPABASE_CONFIG.anonKey || '').trim()
     };
   } catch {
     return { url: '', anonKey: '' };
@@ -256,7 +320,7 @@ export function getSupabaseConfig() {
 
 export function setSupabaseConfig(url, anonKey) {
   localStorage.setItem(SUPA_CFG_KEY, JSON.stringify({
-    url: url.trim(),
+    url: normalizeSupabaseUrl(url),
     anonKey: anonKey.trim()
   }));
   supabaseClient = null;
@@ -339,13 +403,37 @@ export async function pullFromSupabase() {
 }
 
 /**
- * Convierte un archivo o imagen subida en DataURL comprimido (o lo sube a Supabase Storage si está activo)
+ * Convierte un archivo o imagen subida en DataURL comprimido (redimensionado automático para cuidar memoria)
  */
-export function fileToDataUrl(file) {
+export function fileToDataUrl(file, { maxWidth = 480, quality = 0.78 } = {}) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve('');
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      if (!file.type || !file.type.startsWith('image/')) {
+        return resolve(result);
+      }
+      const img = new Image();
+      img.onload = () => {
+        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(result);
+        ctx.drawImage(img, 0, 0, w, h);
+        try {
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch {
+          resolve(result);
+        }
+      };
+      img.onerror = () => resolve(result);
+      img.src = result;
+    };
     reader.onerror = (err) => reject(err);
     reader.readAsDataURL(file);
   });

@@ -9,7 +9,7 @@ import {
   syncToFirebaseIfConfigured,
   pullFromFirebase
 } from '../services/db.js?v=6.0.0';
-import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser } from '../services/auth.js?v=6.1.0';
+import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser } from '../services/auth.js?v=6.2.0';
 import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';

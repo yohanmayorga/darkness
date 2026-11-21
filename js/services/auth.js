@@ -88,34 +88,11 @@ export async function loginWithGoogle() {
     throw new Error('Firebase no está configurado.');
   }
   const provider = new fb.authMod.GoogleAuthProvider();
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    await fb.authMod.signInWithRedirect(fb.auth, provider);
-    return null;
-  }
-  try {
-    const cred = await fb.authMod.signInWithPopup(fb.auth, provider);
-    return finishCloudSignIn(cred.user, cred.user.displayName);
-  } catch (err) {
-    if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/operation-not-supported-in-this-environment') {
-      await fb.authMod.signInWithRedirect(fb.auth, provider);
-      return null;
-    }
-    throw err;
-  }
+  const cred = await fb.authMod.signInWithPopup(fb.auth, provider);
+  return finishCloudSignIn(cred.user, cred.user.displayName);
 }
 
 export async function handleGoogleRedirectResult() {
-  const fb = await getFirebaseClient();
-  if (!fb) return null;
-  try {
-    const cred = await fb.authMod.getRedirectResult(fb.auth);
-    if (cred && cred.user) {
-      return await finishCloudSignIn(cred.user, cred.user.displayName);
-    }
-  } catch (err) {
-    console.warn('Error procesando redirect de Google:', err);
-  }
   return null;
 }
 

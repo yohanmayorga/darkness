@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 ];
 
 function applyTheme(theme) {
-  const valid = theme === 'light' ? 'light' : 'dark';
+  const valid = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', valid);
   localStorage.setItem(THEME_KEY, valid);
   updateThemeButtons(valid);
@@ -96,9 +96,8 @@ function repaintMementoCanvas() {
 function initShell() {
   const shell = document.getElementById('app-shell');
 
-  // 1. Inicializar tema guardado
-  const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
-  applyTheme(savedTheme);
+  // 1. Iniciar siempre en Modo Claro (Light) por defecto
+  applyTheme('light');
 
   // 2. Estado colapsado de sidebar en escritorio
   if (localStorage.getItem(SIDEBAR_KEY) === '1') {

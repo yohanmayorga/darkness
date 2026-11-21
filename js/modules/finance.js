@@ -17,6 +17,7 @@ const FINANCE_CATEGORIES = [
   'Ingresos extras',
   'Transporte',
   'Teléfono',
+  'Suscripciones',
   'Ropa y calzado',
   'Salidas',
   'Regalos',

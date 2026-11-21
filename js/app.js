@@ -1,5 +1,6 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.0.0';
-import { getStore, isFirebaseConfigured, pullFromFirebase } from './services/db.js?v=6.0.0';
+import { initRouter, getActiveRoute } from './router.js?v=6.1.0';
+import { getStore, isFirebaseConfigured, pullFromFirebase } from './services/db.js?v=6.1.0';
+import { handleGoogleRedirectResult } from './services/auth.js?v=6.1.0';
 import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
 
@@ -155,13 +156,16 @@ function initShell() {
 
   // 8. Sincronización automática desde la nube al abrir la página (sin pedir login de nuevo)
   if (isFirebaseConfigured()) {
-    pullFromFirebase().then(res => {
-      if (res?.ok) {
-        updateUserFooter();
-        renderMementoSidebar();
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
-      }
-    }).catch(() => {});
+    handleGoogleRedirectResult()
+      .then(() => pullFromFirebase())
+      .then(res => {
+        if (res?.ok) {
+          updateUserFooter();
+          renderMementoSidebar();
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        }
+      })
+      .catch(() => {});
   }
 
   // 9. Escape: cierra Memento Mori móvil y sale del modo enfoque

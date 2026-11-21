@@ -104,8 +104,8 @@ function repaintMementoCanvas() {
 function initShell() {
   const shell = document.getElementById('app-shell');
 
-  // 1. Iniciar siempre en Modo Claro (Light) por defecto
-  applyTheme('light');
+  // 1. Mantener tema guardado o iniciar en Modo Claro (Light) por defecto
+  applyTheme(localStorage.getItem(THEME_KEY) || 'light');
 
   // 2. Estado colapsado de sidebar en escritorio
   if (localStorage.getItem(SIDEBAR_KEY) === '1') {

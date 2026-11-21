@@ -1,4 +1,4 @@
-import { SUPABASE_CONFIG } from '../config.example.js?v=1.4.0';
+import { SUPABASE_CONFIG } from '../config.example.js?v=5.7.0';
 import { createDefaultHabits, normalizeHabit } from '../utils/habits.js?v=3.3.0';
 
 const STORAGE_KEY = 'darkness_store_v1';

@@ -1,5 +1,5 @@
-import { initRouter, getActiveRoute } from './router.js?v=5.6.0';
-import { getStore, isSupabaseConfigured, pullFromSupabase } from './services/db.js?v=5.2.0';
+import { initRouter, getActiveRoute } from './router.js?v=5.7.0';
+import { getStore, isSupabaseConfigured, pullFromSupabase } from './services/db.js?v=5.7.0';
 import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
 

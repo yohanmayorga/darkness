@@ -260,7 +260,10 @@ export function renderFinance(container) {
                   <div class="finance-list-item-right">
                     <span class="mono text-success" style="font-weight:600;">${fmtMoney(item.amount, currency)}</span>
                     <button type="button" class="btn btn-secondary btn-sm" data-collect-receivable="${item.id}" title="Marcar como cobrado" style="min-height:28px;padding:3px 8px;font-size:0.72rem;">Cobrado</button>
-                    <button type="button" class="btn-icon" data-del-list="receivables" data-del-id="${item.id}" title="Eliminar" style="width:28px;height:28px;">
+                    <button type="button" class="btn-icon" data-edit-list="receivables" data-edit-id="${item.id}" title="Editar" aria-label="Editar" style="width:28px;height:28px;">
+                      ${icon('edit')}
+                    </button>
+                    <button type="button" class="btn-icon" data-del-list="receivables" data-del-id="${item.id}" title="Eliminar" aria-label="Eliminar" style="width:28px;height:28px;">
                       ${icon('trash')}
                     </button>
                   </div>
@@ -453,6 +456,19 @@ export function renderFinance(container) {
     });
   });
 
+  // Editar elementos de listas (receivables, projectedIncome, projectedExpenses, debts)
+  container.querySelectorAll('[data-edit-list]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const listKey = btn.getAttribute('data-edit-list');
+      const id = btn.getAttribute('data-edit-id');
+      const current = getStore();
+      const f = ensureFinance(current);
+      const existing = (f[listKey] || []).find(item => item.id === id);
+      if (!existing) return;
+      openListItemModal(listKey, currency, () => renderFinance(container), existing);
+    });
+  });
+
   // Eliminar de listas
   container.querySelectorAll('[data-del-list]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -515,7 +531,10 @@ function renderSimpleListHTML(items, listKey, currency, emptyText, colorClass) {
           </div>
           <div class="finance-list-item-right">
             <span class="mono ${colorClass}" style="font-weight:600;">${fmtMoney(item.amount, currency)}</span>
-            <button type="button" class="btn-icon" data-del-list="${listKey}" data-del-id="${item.id}" title="Eliminar" style="width:28px;height:28px;">
+            <button type="button" class="btn-icon" data-edit-list="${listKey}" data-edit-id="${item.id}" title="Editar" aria-label="Editar" style="width:28px;height:28px;">
+              ${icon('edit')}
+            </button>
+            <button type="button" class="btn-icon" data-del-list="${listKey}" data-del-id="${item.id}" title="Eliminar" aria-label="Eliminar" style="width:28px;height:28px;">
               ${icon('trash')}
             </button>
           </div>
@@ -525,12 +544,13 @@ function renderSimpleListHTML(items, listKey, currency, emptyText, colorClass) {
   `;
 }
 
-function openListItemModal(listKey, currency, onDone) {
+function openListItemModal(listKey, currency, onDone, existingItem = null) {
+  const isEdit = Boolean(existingItem);
   const titles = {
-    receivables: 'Agregar: Lo que me deben',
-    projectedIncome: 'Agregar Ingreso Proyectado',
-    projectedExpenses: 'Agregar Gasto Proyectado',
-    debts: 'Agregar Deuda'
+    receivables: isEdit ? 'Editar: Lo que me deben' : 'Agregar: Lo que me deben',
+    projectedIncome: isEdit ? 'Editar Ingreso Proyectado' : 'Agregar Ingreso Proyectado',
+    projectedExpenses: isEdit ? 'Editar Gasto Proyectado' : 'Agregar Gasto Proyectado',
+    debts: isEdit ? 'Editar Deuda' : 'Agregar Deuda'
   };
   const nameLabels = {
     receivables: 'Persona / Concepto',
@@ -539,27 +559,38 @@ function openListItemModal(listKey, currency, onDone) {
     debts: 'Deuda / Acreedor'
   };
 
+  const initialTitle = existingItem ? (existingItem.person || existingItem.title || '') : '';
+  const initialAmount = existingItem && existingItem.amount !== undefined ? existingItem.amount : '';
+  const initialNote = existingItem ? (existingItem.note || '') : '';
+  const initialDate = existingItem ? (existingItem.date || todayISO()) : todayISO();
+
   openModal({
-    title: titles[listKey] || 'Agregar Registro',
+    title: titles[listKey] || (isEdit ? 'Editar Registro' : 'Agregar Registro'),
     contentHTML: `
       <form id="form-fin-list-item">
         <div class="form-grid">
           <div class="form-group full">
             <label class="form-label">${nameLabels[listKey] || 'Concepto'}</label>
-            <input type="text" name="title" class="form-input" placeholder="Ej. Alquiler, Juan, Tarjeta..." required />
+            <input type="text" name="title" class="form-input" value="${escapeHtml(initialTitle)}" placeholder="Ej. Alquiler, Juan, Tarjeta..." required />
           </div>
           <div class="form-group">
             <label class="form-label">Monto (${currency})</label>
-            <input type="number" step="any" min="1" name="amount" class="form-input" placeholder="0" required />
+            <input type="number" step="any" min="0" name="amount" class="form-input" value="${initialAmount}" placeholder="0" required />
           </div>
           <div class="form-group">
-            <label class="form-label">Nota (opcional)</label>
-            <input type="text" name="note" class="form-input" placeholder="Detalle breve" />
+            <label class="form-label">Nota / Detalle (opcional)</label>
+            <input type="text" name="note" class="form-input" value="${escapeHtml(initialNote)}" placeholder="Detalle breve" />
           </div>
+          ${listKey === 'receivables' ? `
+            <div class="form-group full">
+              <label class="form-label">Fecha</label>
+              <input type="date" name="date" class="form-input" value="${escapeHtml(initialDate)}" />
+            </div>
+          ` : ''}
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancel-list-item">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar</button>
+          <button type="submit" class="btn btn-primary">${isEdit ? 'Guardar cambios' : 'Guardar'}</button>
         </div>
       </form>
     `,
@@ -571,17 +602,28 @@ function openListItemModal(listKey, currency, onDone) {
         const title = String(fd.get('title')).trim();
         const amount = Math.round(Number(fd.get('amount')) || 0);
         const note = String(fd.get('note') || '').trim();
+        const dateVal = String(fd.get('date') || '').trim();
         const current = getStore();
         const f = ensureFinance(current);
 
-        const entry = listKey === 'receivables'
-          ? { id: generateId('rec'), person: title, title, amount, note, date: todayISO() }
-          : { id: generateId('fin'), title, amount, note };
+        if (isEdit) {
+          f[listKey] = (f[listKey] || []).map(item => {
+            if (item.id !== existingItem.id) return item;
+            if (listKey === 'receivables') {
+              return { ...item, person: title, title, amount, note, date: dateVal || item.date || todayISO() };
+            }
+            return { ...item, title, amount, note };
+          });
+        } else {
+          const entry = listKey === 'receivables'
+            ? { id: generateId('rec'), person: title, title, amount, note, date: dateVal || todayISO() }
+            : { id: generateId('fin'), title, amount, note };
+          f[listKey].unshift(entry);
+        }
 
-        f[listKey].unshift(entry);
         saveStore(current);
         closeModal();
-        showToast('Registro agregado');
+        showToast(isEdit ? 'Registro actualizado' : 'Registro agregado');
         onDone();
       });
     }

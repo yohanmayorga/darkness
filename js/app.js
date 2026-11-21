@@ -1,14 +1,14 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.5.0';
-import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.1.0';
+import { initRouter, getActiveRoute } from './router.js?v=6.9.0';
+import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.9.0';
 import {
   handleGoogleRedirectResult,
   loginWithPin,
   registerWithPin,
   loginWithGoogle,
   isValidPin
-} from './services/auth.js?v=6.3.0';
+} from './services/auth.js?v=6.9.0';
 import { icon } from './components/icons.js?v=3.3.0';
-import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=1.6.0';
+import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=6.9.0';
 
 const THEME_KEY = 'darkness_theme';
 const SIDEBAR_KEY = 'darkness_sidebar_collapsed';

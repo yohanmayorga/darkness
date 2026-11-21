@@ -8,8 +8,8 @@ import {
   isFirebaseConfigured,
   syncToFirebaseIfConfigured,
   pullFromFirebase
-} from '../services/db.js?v=6.0.0';
-import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser, migrateStoreToPin, isValidPin } from '../services/auth.js?v=6.3.0';
+} from '../services/db.js?v=6.9.0';
+import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser, migrateStoreToPin, isValidPin } from '../services/auth.js?v=6.9.0';
 import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';

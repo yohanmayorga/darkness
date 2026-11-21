@@ -1,4 +1,4 @@
-import { getStore, saveStore } from '../services/db.js?v=1.4.0';
+import { getStore, saveStore } from '../services/db.js?v=6.9.0';
 import { icon } from './icons.js?v=1.4.0';
 import { openModal, closeModal } from './modal.js?v=1.4.0';
 import { showToast } from './toast.js?v=1.4.0';

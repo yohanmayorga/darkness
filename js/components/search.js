@@ -287,6 +287,9 @@ export function initGlobalSearch(navItems) {
               spellcheck="false"
             />
             <span class="cyber-search-kbd">ESC</span>
+            <button type="button" class="btn-icon cyber-search-close" id="cyber-search-close" title="Cerrar (ESC)" aria-label="Cerrar buscador">
+              ${icon('close')}
+            </button>
           </div>
           <div class="cyber-search-results" id="cyber-search-results"></div>
           <div class="cyber-search-foot">
@@ -300,6 +303,7 @@ export function initGlobalSearch(navItems) {
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) closeSearch();
     });
+    backdrop.querySelector('#cyber-search-close')?.addEventListener('click', closeSearch);
 
     const inputEl = backdrop.querySelector('#cyber-search-input');
     const resultsEl = backdrop.querySelector('#cyber-search-results');

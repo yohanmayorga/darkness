@@ -4,6 +4,7 @@ import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { formatDateDMY } from '../utils/text.js?v=4.3.0';
 import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
+import { attachChartZoom, formatZoomLabel } from '../utils/chartZoom.js?v=1.0.0';
 
 const BODY_METRICS_META = [
   { key: 'weightKg', label: 'Peso', unit: 'kg', step: '0.1', placeholder: '74.5' },
@@ -61,6 +62,166 @@ function getMetricValue(record, key) {
 function formatVal(val, unit = '') {
   if (val === null || val === undefined || Number.isNaN(val)) return '--';
   return unit ? `${val}${unit === '%' ? '%' : ` ${unit}`}` : String(val);
+}
+
+function getLatestAvailableMetric(sorted, key) {
+  for (const record of sorted) {
+    const val = getMetricValue(record, key);
+    if (val !== null && !Number.isNaN(val)) return val;
+  }
+  return null;
+}
+
+/**
+ * Figura SVG estilo Hombre de Vitruvio Cyberpunk con nodos conectados
+ * para Grasa Corporal (cara), Bíceps, Barriga (cintura) y Muslos.
+ */
+function buildVitruvianCyberSVG(sorted, activeMetricKey) {
+  const fatVal = formatVal(getLatestAvailableMetric(sorted, 'bodyFatPct'), '%');
+  const bicepsVal = formatVal(getLatestAvailableMetric(sorted, 'bicepsCm'), 'cm');
+  const waistVal = formatVal(getLatestAvailableMetric(sorted, 'waistCm'), 'cm');
+  const thighVal = formatVal(getLatestAvailableMetric(sorted, 'thighCm'), 'cm');
+
+  const nodeClass = (key) => `vitruvian-node${activeMetricKey === key ? ' is-active' : ''}`;
+
+  return `
+    <svg class="vitruvian-svg" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Diagrama Bio-Escáner Cyberpunk con mediciones recientes">
+      <defs>
+        <filter id="vitruvian-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Telemetría superior / inferior -->
+      <text x="10" y="14" class="vitruvian-hud-micro">BIO-ESCÁNER // CYBER-SCAN</text>
+      <text x="350" y="14" text-anchor="end" class="vitruvian-hud-micro">SYNC: LIVE</text>
+      <text x="10" y="292" class="vitruvian-hud-micro">PROPORTIO.01 // 1:1.618</text>
+      <text x="350" y="292" text-anchor="end" class="vitruvian-hud-micro">BIO-NODES [04]</text>
+
+      <!-- Geometría Vitruviana: Círculo y Cuadrado -->
+      <circle cx="180" cy="154" r="114" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" opacity="0.65" />
+      <circle cx="180" cy="154" r="119" fill="none" stroke="var(--hud-border)" stroke-width="0.75" stroke-dasharray="2 4" />
+      <rect x="76" y="48" width="208" height="216" fill="none" stroke="var(--hud-border)" stroke-width="0.9" opacity="0.7" />
+
+      <!-- Ejes y marcas de proporción áurea -->
+      <line x1="180" y1="30" x2="180" y2="276" stroke="var(--hud-border-subtle)" stroke-width="0.8" stroke-dasharray="3 3" />
+      <line x1="60" y1="154" x2="300" y2="154" stroke="var(--hud-border-subtle)" stroke-width="0.8" stroke-dasharray="3 3" />
+      <line x1="76" y1="88" x2="284" y2="88" stroke="var(--hud-border-subtle)" stroke-width="0.6" />
+      <line x1="76" y1="192" x2="284" y2="192" stroke="var(--hud-border-subtle)" stroke-width="0.6" />
+
+      <!-- Marcas angulares en el círculo -->
+      <g stroke="var(--hud-border-strong)" stroke-width="1" opacity="0.6">
+        <line x1="180" y1="36" x2="180" y2="42" />
+        <line x1="180" y1="266" x2="180" y2="272" />
+        <line x1="62" y1="154" x2="68" y2="154" />
+        <line x1="292" y1="154" x2="298" y2="154" />
+        <line x1="97" y1="71" x2="102" y2="76" />
+        <line x1="263" y1="71" x2="258" y2="76" />
+        <line x1="97" y1="237" x2="102" y2="232" />
+        <line x1="263" y1="237" x2="258" y2="232" />
+      </g>
+
+      <!-- Pose Secundaria Vitruvio (Wireframe Fantasma Cyberpunk) -->
+      <g fill="none" stroke="var(--hud-border-strong)" stroke-width="1.1" stroke-dasharray="3 2.5" opacity="0.55">
+        <!-- Brazos elevados -->
+        <polyline points="148,96 122,82 96,64" />
+        <polyline points="212,96 238,82 264,64" />
+        <circle cx="95" cy="63" r="2.2" />
+        <circle cx="265" cy="63" r="2.2" />
+        <!-- Piernas abiertas -->
+        <polyline points="168,176 146,216 124,254" />
+        <polyline points="192,176 214,216 236,254" />
+        <circle cx="123" cy="256" r="2.2" />
+        <circle cx="237" cy="256" r="2.2" />
+      </g>
+
+      <!-- Silueta Principal Cibernética -->
+      <g stroke="var(--hud-accent)" stroke-width="1.35" stroke-linejoin="round" stroke-linecap="round">
+        <!-- Cabeza y Visor Cyberpunk -->
+        <polygon points="171,52 189,52 192,62 189,76 183,82 177,82 171,76 168,62" fill="var(--hud-bg-elevated)" />
+        <line x1="180" y1="52" x2="180" y2="59" stroke="var(--hud-border-strong)" stroke-width="0.9" />
+        <rect x="170" y="61" width="20" height="4.8" rx="1.2" fill="var(--cyber-yellow)" stroke="none" filter="url(#vitruvian-glow)" />
+        <line x1="175" y1="74" x2="185" y2="74" stroke="var(--hud-text-muted)" stroke-width="0.9" />
+
+        <!-- Cuello y Trapecios -->
+        <polygon points="175,82 185,82 189,93 171,93" fill="var(--hud-bg-elevated)" />
+
+        <!-- Torso / Exoesqueleto Anatómico -->
+        <polygon points="148,94 212,94 205,126 197,148 200,174 180,182 160,174 163,148 155,126" fill="var(--hud-bg-elevated)" />
+        <!-- Placas pectorales y abdomen segmentado -->
+        <polyline points="154,104 176,112 180,112 184,112 206,104" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" />
+        <line x1="180" y1="94" x2="180" y2="176" stroke="var(--hud-border-strong)" stroke-width="0.9" />
+        <line x1="164" y1="132" x2="196" y2="132" stroke="var(--hud-border)" stroke-width="0.9" />
+        <line x1="164" y1="145" x2="196" y2="145" stroke="var(--hud-border)" stroke-width="0.9" />
+        <line x1="163" y1="158" x2="197" y2="158" stroke="var(--hud-border)" stroke-width="0.9" />
+        <circle cx="180" cy="112" r="3" fill="var(--hud-bg)" stroke="var(--hud-accent)" stroke-width="1.2" />
+
+        <!-- Brazo Izquierdo (Horizontal Vitruviano) -->
+        <polygon points="148,94 114,96 86,98 76,100 86,104 114,104 148,107" fill="var(--hud-bg-elevated)" />
+        <!-- Brazo Derecho (Horizontal Vitruviano) -->
+        <polygon points="212,94 246,96 274,98 284,100 274,104 246,104 212,107" fill="var(--hud-bg-elevated)" />
+        <!-- Nodos articulares de brazos -->
+        <circle cx="147" cy="100" r="2.6" fill="var(--hud-bg)" />
+        <circle cx="213" cy="100" r="2.6" fill="var(--hud-bg)" />
+        <circle cx="114" cy="100" r="2" fill="var(--hud-bg)" />
+        <circle cx="246" cy="100" r="2" fill="var(--hud-bg)" />
+
+        <!-- Pierna Izquierda -->
+        <polygon points="160,174 177,178 174,218 172,258 160,264 157,260 162,218 158,186" fill="var(--hud-bg-elevated)" />
+        <!-- Pierna Derecha -->
+        <polygon points="200,174 183,178 186,218 188,258 200,264 203,260 198,218 202,186" fill="var(--hud-bg-elevated)" />
+        <!-- Placas de rodilla y espinilla -->
+        <circle cx="167" cy="218" r="2.4" fill="var(--hud-bg)" />
+        <circle cx="193" cy="218" r="2.4" fill="var(--hud-bg)" />
+        <line x1="166" y1="190" x2="167" y2="212" stroke="var(--hud-border-strong)" stroke-width="0.9" />
+        <line x1="194" y1="190" x2="193" y2="212" stroke="var(--hud-border-strong)" stroke-width="0.9" />
+      </g>
+
+      <!-- NODO 1: GRASA CORPORAL (en la cara) -->
+      <g class="${nodeClass('bodyFatPct')}" data-vitruvian-metric="bodyFatPct" role="button" tabindex="0" aria-label="Ver evolución de Grasa corporal">
+        <polyline class="vitruvian-callout-line" points="172,64 134,32 94,32" />
+        <circle cx="172" cy="64" r="4.2" fill="none" stroke="var(--cyber-yellow)" stroke-width="1" opacity="0.7" />
+        <circle class="vitruvian-dot-core" cx="172" cy="64" r="2.2" fill="var(--hud-accent)" />
+        <rect class="vitruvian-callout-box" x="6" y="18" width="88" height="28" rx="2" />
+        <text class="vitruvian-callout-label" x="12" y="29">GRASA CORP.</text>
+        <text class="vitruvian-callout-val" x="12" y="41">${fatVal}</text>
+      </g>
+
+      <!-- NODO 2: BÍCEPS -->
+      <g class="${nodeClass('bicepsCm')}" data-vitruvian-metric="bicepsCm" role="button" tabindex="0" aria-label="Ver evolución de Bíceps">
+        <polyline class="vitruvian-callout-line" points="234,98 256,52 266,52" />
+        <circle cx="234" cy="98" r="4.2" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" />
+        <circle class="vitruvian-dot-core" cx="234" cy="98" r="2.2" fill="var(--hud-accent)" />
+        <rect class="vitruvian-callout-box" x="266" y="38" width="88" height="28" rx="2" />
+        <text class="vitruvian-callout-label" x="272" y="49">BÍCEPS</text>
+        <text class="vitruvian-callout-val" x="272" y="61">${bicepsVal}</text>
+      </g>
+
+      <!-- NODO 3: BARRIGA (Cintura / Abdomen) -->
+      <g class="${nodeClass('waistCm')}" data-vitruvian-metric="waistCm" role="button" tabindex="0" aria-label="Ver evolución de Barriga">
+        <polyline class="vitruvian-callout-line" points="174,148 124,178 94,178" />
+        <circle cx="174" cy="148" r="4.2" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" />
+        <circle class="vitruvian-dot-core" cx="174" cy="148" r="2.2" fill="var(--hud-accent)" />
+        <rect class="vitruvian-callout-box" x="6" y="164" width="88" height="28" rx="2" />
+        <text class="vitruvian-callout-label" x="12" y="175">BARRIGA</text>
+        <text class="vitruvian-callout-val" x="12" y="187">${waistVal}</text>
+      </g>
+
+      <!-- NODO 4: MUSLOS -->
+      <g class="${nodeClass('thighCm')}" data-vitruvian-metric="thighCm" role="button" tabindex="0" aria-label="Ver evolución de Muslos">
+        <polyline class="vitruvian-callout-line" points="195,198 242,226 266,226" />
+        <circle cx="195" cy="198" r="4.2" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" />
+        <circle class="vitruvian-dot-core" cx="195" cy="198" r="2.2" fill="var(--hud-accent)" />
+        <rect class="vitruvian-callout-box" x="266" y="212" width="88" height="28" rx="2" />
+        <text class="vitruvian-callout-label" x="272" y="223">MUSLOS</text>
+        <text class="vitruvian-callout-val" x="272" y="235">${thighVal}</text>
+      </g>
+    </svg>
+  `;
 }
 
 function getChronologicalAge(birthDateStr) {
@@ -476,39 +637,52 @@ export function renderBody(container) {
       </div>
     </section>
 
-    <section class="card cyber-frame-wrap" style="margin-bottom: 24px;">
-      ${hudFrameOrnaments()}
-      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
-        <h2 class="card-title" id="body-chart-title">${icon('body')} Evolución: ${activeMeta.label}${activeMeta.unit ? ` (${activeMeta.unit})` : ''}</h2>
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <select id="body-chart-year" class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:0.76rem;" aria-label="Filtrar por año">
-            <option value="all" ${selectedChartYear === 'all' ? 'selected' : ''}>Todos los años</option>
-            ${[...new Set((store.bodyMetrics || []).map(r => String(r.date || '').slice(0, 4)).filter(Boolean))].sort().reverse().map(y => `
-              <option value="${y}" ${selectedChartYear === y ? 'selected' : ''}>${y}</option>
-            `).join('')}
-          </select>
-          <select id="body-chart-month" class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:0.76rem;" aria-label="Filtrar por mes">
-            <option value="all" ${selectedChartMonth === 'all' ? 'selected' : ''}>Todos los meses</option>
-            ${MONTHS.map((mName, idx) => {
-              const mm = String(idx + 1).padStart(2, '0');
-              return `<option value="${mm}" ${selectedChartMonth === mm ? 'selected' : ''}>${mName}</option>`;
-            }).join('')}
-          </select>
-          <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom del gráfico">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-chart-zoom-out" title="Alejar zoom">−</button>
-            <button type="button" class="btn btn-secondary btn-sm mono" id="btn-chart-zoom-reset" title="Restablecer zoom">${chartZoom}x</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-chart-zoom-in" title="Acercar zoom">+</button>
-          </div>
-          <select id="body-chart-metric" class="form-select" style="width:auto;min-width:170px;min-height:32px;padding:4px 10px;font-size:0.76rem;" aria-label="Seleccionar métrica del gráfico">
-            ${BODY_METRICS_META.map(m => `
-              <option value="${m.key}" ${m.key === selectedChartMetric ? 'selected' : ''}>${m.label}${m.unit ? ` (${m.unit})` : ''}</option>
-            `).join('')}
-          </select>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-chart-reset-filters" title="Restablecer peso, fechas y zoom">Borrar filtros</button>
+    <section class="body-visual-grid">
+      <div class="card cyber-frame-wrap body-vitruvian-card">
+        ${hudFrameOrnaments()}
+        <div class="card-header">
+          <h2 class="card-title">${icon('body')} Bio-Escáner</h2>
+          <span class="cyber-tag">ANTHRO.04</span>
+        </div>
+        <div class="body-vitruvian-stage">
+          ${buildVitruvianCyberSVG(sorted, selectedChartMetric)}
         </div>
       </div>
-      <div id="body-chart-container">
-        ${buildBodyChartSVG(store.bodyMetrics, selectedChartMetric)}
+
+      <div class="card cyber-frame-wrap body-chart-card">
+        ${hudFrameOrnaments()}
+        <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+          <h2 class="card-title" id="body-chart-title">${icon('body')} Evolución: ${activeMeta.label}${activeMeta.unit ? ` (${activeMeta.unit})` : ''}</h2>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <select id="body-chart-year" class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:0.76rem;" aria-label="Filtrar por año">
+              <option value="all" ${selectedChartYear === 'all' ? 'selected' : ''}>Todos los años</option>
+              ${[...new Set((store.bodyMetrics || []).map(r => String(r.date || '').slice(0, 4)).filter(Boolean))].sort().reverse().map(y => `
+                <option value="${y}" ${selectedChartYear === y ? 'selected' : ''}>${y}</option>
+              `).join('')}
+            </select>
+            <select id="body-chart-month" class="form-select" style="width:auto;min-height:32px;padding:4px 8px;font-size:0.76rem;" aria-label="Filtrar por mes">
+              <option value="all" ${selectedChartMonth === 'all' ? 'selected' : ''}>Todos los meses</option>
+              ${MONTHS.map((mName, idx) => {
+                const mm = String(idx + 1).padStart(2, '0');
+                return `<option value="${mm}" ${selectedChartMonth === mm ? 'selected' : ''}>${mName}</option>`;
+              }).join('')}
+            </select>
+            <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom del gráfico">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-chart-zoom-out" title="Alejar zoom">−</button>
+              <button type="button" class="btn btn-secondary btn-sm mono" id="btn-chart-zoom-reset" title="Restablecer zoom">${chartZoom}x</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-chart-zoom-in" title="Acercar zoom">+</button>
+            </div>
+            <select id="body-chart-metric" class="form-select" style="width:auto;min-width:170px;min-height:32px;padding:4px 10px;font-size:0.76rem;" aria-label="Seleccionar métrica del gráfico">
+              ${BODY_METRICS_META.map(m => `
+                <option value="${m.key}" ${m.key === selectedChartMetric ? 'selected' : ''}>${m.label}${m.unit ? ` (${m.unit})` : ''}</option>
+              `).join('')}
+            </select>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-chart-reset-filters" title="Restablecer peso, fechas y zoom">Borrar filtros</button>
+          </div>
+        </div>
+        <div id="body-chart-container" class="body-chart-container">
+          ${buildBodyChartSVG(store.bodyMetrics, selectedChartMetric)}
+        </div>
       </div>
     </section>
 
@@ -605,6 +779,22 @@ export function renderBody(container) {
   `;
 
   // Filtros y zoom del gráfico
+  const bindBodyChartZoom = () => {
+    const scrollEl = container.querySelector('#body-chart-container .chart-scroll-wrap');
+    attachChartZoom(scrollEl, {
+      getZoom: () => chartZoom,
+      setZoom: (z) => { chartZoom = z; },
+      minZoom: 1,
+      maxZoom: 6,
+      step: 0.25,
+      onZoomChange: (_nextZoom, restoreScroll) => {
+        refreshChart();
+        const nextScrollEl = container.querySelector('#body-chart-container .chart-scroll-wrap');
+        restoreScroll(nextScrollEl);
+      }
+    });
+  };
+
   const refreshChart = () => {
     const meta = BODY_METRICS_META.find(m => m.key === selectedChartMetric) || BODY_METRICS_META[0];
     const titleEl = container.querySelector('#body-chart-title');
@@ -613,11 +803,35 @@ export function renderBody(container) {
     if (titleEl) {
       titleEl.innerHTML = `${icon('body')} Evolución: ${meta.label}${meta.unit ? ` (${meta.unit})` : ''}`;
     }
-    if (zoomBtn) zoomBtn.textContent = `${chartZoom}x`;
+    if (zoomBtn) zoomBtn.textContent = formatZoomLabel(chartZoom);
     if (chartContainer) {
       chartContainer.innerHTML = buildBodyChartSVG(getStore().bodyMetrics, selectedChartMetric);
     }
+    container.querySelectorAll('[data-vitruvian-metric]').forEach(node => {
+      node.classList.toggle('is-active', node.getAttribute('data-vitruvian-metric') === selectedChartMetric);
+    });
+    bindBodyChartZoom();
   };
+
+  bindBodyChartZoom();
+
+  container.querySelectorAll('[data-vitruvian-metric]').forEach(node => {
+    const selectMetric = () => {
+      const metric = node.getAttribute('data-vitruvian-metric');
+      if (!metric) return;
+      selectedChartMetric = metric;
+      const metricEl = container.querySelector('#body-chart-metric');
+      if (metricEl) metricEl.value = metric;
+      refreshChart();
+    };
+    node.addEventListener('click', selectMetric);
+    node.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectMetric();
+      }
+    });
+  });
 
   container.querySelector('#body-chart-metric')?.addEventListener('change', (e) => {
     selectedChartMetric = e.target.value;

@@ -794,6 +794,7 @@
   overflow-y: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--border-strong) transparent;
+  touch-action: pan-x pan-y;
 }
 
 .chart-box {
@@ -1113,6 +1114,133 @@
     margin-top: 16px;
     overflow-y: visible;
     z-index: auto;
+  }
+}
+
+/* ==========================================
+   Cuerpo y Peso: Vitruvio Cyberpunk + Gráfica
+   ========================================== */
+.body-visual-grid {
+  display: grid;
+  grid-template-columns: minmax(290px, 370px) 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+
+.body-vitruvian-card,
+.body-chart-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.body-chart-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+}
+
+.body-chart-container .chart-scroll-wrap {
+  flex: 0 0 auto;
+}
+
+.body-chart-container .chart-box {
+  height: 225px;
+}
+
+.body-vitruvian-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 225px;
+  padding: 4px;
+  background-image: var(--cyber-grid);
+  background-size: 16px 16px;
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.vitruvian-svg {
+  width: 100%;
+  height: 100%;
+  max-height: 275px;
+  display: block;
+}
+
+.vitruvian-node {
+  cursor: pointer;
+  transition: opacity 0.16s ease;
+}
+
+.vitruvian-node:hover .vitruvian-callout-box,
+.vitruvian-node.is-active .vitruvian-callout-box {
+  stroke: var(--cyber-yellow);
+  stroke-width: 1.3;
+}
+
+.vitruvian-node:hover .vitruvian-callout-line,
+.vitruvian-node.is-active .vitruvian-callout-line {
+  stroke: var(--cyber-yellow);
+  opacity: 1;
+}
+
+.vitruvian-node:hover .vitruvian-dot-core,
+.vitruvian-node.is-active .vitruvian-dot-core {
+  fill: var(--cyber-yellow);
+}
+
+.vitruvian-callout-box {
+  fill: var(--hud-bg-elevated);
+  stroke: var(--hud-border-strong);
+  stroke-width: 1;
+  transition: stroke 0.16s ease;
+}
+
+.vitruvian-callout-line {
+  fill: none;
+  stroke: var(--hud-accent);
+  stroke-width: 1.1;
+  opacity: 0.78;
+  transition: stroke 0.16s ease, opacity 0.16s ease;
+}
+
+.vitruvian-callout-label {
+  font-family: var(--font-mono);
+  font-size: 7.4px;
+  letter-spacing: 0.08em;
+  fill: var(--hud-text-muted);
+  text-transform: uppercase;
+}
+
+.vitruvian-callout-val {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: var(--hud-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.vitruvian-hud-micro {
+  font-family: var(--font-mono);
+  font-size: 6.8px;
+  letter-spacing: 0.11em;
+  fill: var(--hud-text-muted);
+}
+
+@media (max-width: 1020px) {
+  .body-visual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .body-vitruvian-stage {
+    min-height: 240px;
   }
 }
 
@@ -1972,9 +2100,9 @@ html.app-locked .pin-gate {
   backdrop-filter: blur(10px) saturate(110%);
   -webkit-backdrop-filter: blur(10px) saturate(110%);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: max(64px, calc(var(--safe-top) + 40px)) 16px max(16px, var(--safe-bottom));
+  padding: max(16px, var(--safe-top)) 16px max(16px, var(--safe-bottom));
   opacity: 0;
   transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -2290,7 +2418,7 @@ html.app-locked .pin-gate {
 
 @media (max-width: 640px) {
   .cyber-search-backdrop {
-    padding-top: max(18px, calc(var(--safe-top) + 12px));
+    padding: max(14px, var(--safe-top)) 12px max(14px, var(--safe-bottom));
   }
   .cyber-frame-wrap,
   .card.cyber-frame-wrap {

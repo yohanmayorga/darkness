@@ -4,6 +4,7 @@ import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { escapeHTML } from '../utils/text.js?v=1.4.0';
 import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
+import { attachChartZoom, formatZoomLabel } from '../utils/chartZoom.js?v=1.0.0';
 import {
   addDays, parseISO, isValidISO,
   ALL_DAYS, WORK_DAYS, WEEKEND_DAYS, WEEK_ORDER, DAY_SHORT, DAY_LETTER,
@@ -23,7 +24,7 @@ const RANGES = [
 ];
 
 // Estado de la vista mientras navegas por la app
-const state = { selectedDate: null, calYear: null, calMonth: null, range: 'all' };
+const state = { selectedDate: null, calYear: null, calMonth: null, range: 'all', zoom: 1 };
 
 const esc = v => escapeHTML(String(v ?? ''));
 
@@ -57,12 +58,19 @@ export function renderHabits(container) {
 
     <section class="card habit-chart-card cyber-frame-wrap">
       ${hudFrameOrnaments()}
-      <div class="card-header">
+      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
         <h2 class="card-title">${icon('dashboard')} Evolución del cumplimiento</h2>
-        <div class="habit-range" role="group" aria-label="Rango de la gráfica">
-          ${RANGES.map(r => `
-            <button type="button" class="habit-range-btn ${state.range === r.key ? 'active' : ''}" data-range="${r.key}">${r.label}</button>
-          `).join('')}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-out" title="Alejar zoom">−</button>
+            <button type="button" class="btn btn-secondary btn-sm mono" id="btn-hc-zoom-reset" title="Restablecer zoom">${formatZoomLabel(state.zoom)}</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-in" title="Acercar zoom">+</button>
+          </div>
+          <div class="habit-range" role="group" aria-label="Rango de la gráfica">
+            ${RANGES.map(r => `
+              <button type="button" class="habit-range-btn ${state.range === r.key ? 'active' : ''}" data-range="${r.key}">${r.label}</button>
+            `).join('')}
+          </div>
         </div>
       </div>
       ${buildChart(habits, today)}
@@ -152,8 +160,9 @@ function buildChart(habits, today) {
     </div>
     <div class="hc-wrap">
       <div class="hc-yaxis mono" aria-hidden="true"><span>100%</span><span>50%</span><span>0%</span></div>
-      <div class="hc-plot">
-        <svg class="hc-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cumplimiento diario">
+      <div class="hc-scroll-wrap">
+        <div class="hc-plot" style="width:${state.zoom * 100}%;min-width:100%;">
+          <svg class="hc-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Cumplimiento diario">
           <defs>
             <linearGradient id="hc-grad-high" x1="0" y1="1" x2="0" y2="0">
               <stop offset="0%" stop-color="var(--status-success-bg)" />
@@ -175,6 +184,7 @@ function buildChart(habits, today) {
           ${avgPoints.length > 1 ? `<polyline class="hc-line" points="${avgPoints.join(' ')}"/>` : ''}
         </svg>
         <div class="hc-xaxis mono">${xLabels}</div>
+        </div>
       </div>
     </div>
     <div class="hc-legend">
@@ -676,6 +686,37 @@ function bindEvents(container, today) {
     state.range = v === 'all' ? 'all' : Number(v);
     rerender();
   }));
+
+  // Zoom de la gráfica (botones, rueda del mouse y pellizco táctil)
+  const updateHabitZoom = (restoreScroll) => {
+    const plotEl = container.querySelector('.hc-plot');
+    const zoomBtn = container.querySelector('#btn-hc-zoom-reset');
+    if (plotEl) plotEl.style.width = `${state.zoom * 100}%`;
+    if (zoomBtn) zoomBtn.textContent = formatZoomLabel(state.zoom);
+    if (typeof restoreScroll === 'function') restoreScroll();
+  };
+
+  container.querySelector('#btn-hc-zoom-in')?.addEventListener('click', () => {
+    state.zoom = Math.min(6, Number((state.zoom + 0.5).toFixed(2)));
+    updateHabitZoom();
+  });
+  container.querySelector('#btn-hc-zoom-out')?.addEventListener('click', () => {
+    state.zoom = Math.max(1, Number((state.zoom - 0.5).toFixed(2)));
+    updateHabitZoom();
+  });
+  container.querySelector('#btn-hc-zoom-reset')?.addEventListener('click', () => {
+    state.zoom = 1;
+    updateHabitZoom();
+  });
+
+  attachChartZoom(container.querySelector('.hc-scroll-wrap'), {
+    getZoom: () => state.zoom,
+    setZoom: (z) => { state.zoom = z; },
+    minZoom: 1,
+    maxZoom: 6,
+    step: 0.25,
+    onZoomChange: (_nextZoom, restoreScroll) => updateHabitZoom(restoreScroll)
+  });
 
   // Clic en una barra de la gráfica: abrir ese día
   container.querySelectorAll('.hc-hit[data-day]').forEach(el => el.addEventListener('click', () => {

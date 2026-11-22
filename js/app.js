@@ -9,7 +9,7 @@ import {
 } from './services/auth.js?v=6.9.0';
 import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=6.9.0';
-import { initGlobalSearch } from './components/search.js?v=1.3.0';
+import { initGlobalSearch } from './components/search.js?v=1.3.1';
 import { hudFrameOrnaments } from './components/hudFrame.js?v=1.0.0';
 
 const THEME_KEY = 'darkness_theme';

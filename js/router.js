@@ -1,7 +1,7 @@
 import { renderDashboard } from './modules/dashboard.js?v=6.9.1';
-import { renderHabits } from './modules/habits.js?v=6.9.1';
+import { renderHabits } from './modules/habits.js?v=6.9.2';
 import { renderTasks } from './modules/tasks.js?v=6.9.0';
-import { renderBody } from './modules/body.js?v=6.9.1';
+import { renderBody } from './modules/body.js?v=6.9.3';
 import { renderReading } from './modules/reading.js?v=6.9.0';
 import { renderJournal } from './modules/journal.js?v=6.9.0';
 import { renderFinance } from './modules/finance.js?v=6.9.1';

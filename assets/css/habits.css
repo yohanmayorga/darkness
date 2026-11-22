@@ -68,8 +68,17 @@
   transform: translateY(-0.4em);
 }
 
-.hc-plot {
+.hc-scroll-wrap {
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  touch-action: pan-x pan-y;
+}
+
+.hc-plot {
+  min-width: 100%;
 }
 
 .hc-svg {

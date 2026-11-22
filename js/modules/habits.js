@@ -3,6 +3,7 @@ import { icon } from '../components/icons.js?v=3.3.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { escapeHTML } from '../utils/text.js?v=1.4.0';
+import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
 import {
   addDays, parseISO, isValidISO,
   ALL_DAYS, WORK_DAYS, WEEKEND_DAYS, WEEK_ORDER, DAY_SHORT, DAY_LETTER,
@@ -54,7 +55,8 @@ export function renderHabits(container) {
       </div>
     </header>
 
-    <section class="card habit-chart-card">
+    <section class="card habit-chart-card cyber-frame-wrap">
+      ${hudFrameOrnaments()}
       <div class="card-header">
         <h2 class="card-title">${icon('dashboard')} Evolución del cumplimiento</h2>
         <div class="habit-range" role="group" aria-label="Rango de la gráfica">

@@ -3,6 +3,7 @@ import { icon } from '../components/icons.js?v=3.3.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { formatDateDMY } from '../utils/text.js?v=4.3.0';
+import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
 
 const BODY_METRICS_META = [
   { key: 'weightKg', label: 'Peso', unit: 'kg', step: '0.1', placeholder: '74.5' },
@@ -475,7 +476,8 @@ export function renderBody(container) {
       </div>
     </section>
 
-    <section class="card" style="margin-bottom: 24px;">
+    <section class="card cyber-frame-wrap" style="margin-bottom: 24px;">
+      ${hudFrameOrnaments()}
       <div class="card-header" style="flex-wrap:wrap;gap:8px;">
         <h2 class="card-title" id="body-chart-title">${icon('body')} Evolución: ${activeMeta.label}${activeMeta.unit ? ` (${activeMeta.unit})` : ''}</h2>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">

@@ -4,6 +4,7 @@ import { showToast } from '../components/toast.js?v=1.4.0';
 import { renderMementoSidebar } from '../components/memento.js?v=1.6.0';
 import { escapeHTML, stripHTML, formatDateDMY } from '../utils/text.js?v=4.3.0';
 import { isScheduled, isDone, normalizeHabit } from '../utils/habits.js?v=3.3.0';
+import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
 
 const DECALOGUE = [
   'Habla con una voz profunda y lenta',
@@ -241,7 +242,8 @@ export function renderDashboard(container) {
     </section>
 
     <!-- Decálogo Personal -->
-    <section class="card" style="margin-bottom:16px;">
+    <section class="card cyber-frame-wrap" style="margin-bottom:16px;">
+      ${hudFrameOrnaments()}
       <div class="card-header">
         <h2 class="card-title">${icon('shield')} Decálogo Personal</h2>
         <span class="cyber-tag">CODE.10</span>

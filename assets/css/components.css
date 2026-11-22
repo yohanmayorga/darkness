@@ -1788,32 +1788,35 @@ html.app-locked .pin-gate {
   opacity: 1;
 }
 
+.cyber-lock-frame {
+  max-width: 446px;
+  transform: scale(0.95) translateY(8px);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cyber-lock-backdrop.open .cyber-lock-frame {
+  transform: scale(1) translateY(0);
+}
+
 .cyber-lock-dialog {
   position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 410px;
   background-color: var(--bg-surface);
   background-image:
     var(--cyber-grid),
     repeating-linear-gradient(0deg, transparent 0 2px, var(--cyber-lock-scanline) 2px 4px);
   background-size: 20px 20px, 100% 4px;
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--cyber-lock-glow);
+  border: 1px solid var(--border-default);
   overflow: hidden;
   clip-path: polygon(
     0 0,
-    calc(100% - var(--cyber-cut-lg)) 0,
-    100% var(--cyber-cut-lg),
+    calc(100% - var(--cyber-cut-md)) 0,
+    100% var(--cyber-cut-md),
     100% 100%,
-    var(--cyber-cut-lg) 100%,
-    0 calc(100% - var(--cyber-cut-lg))
+    var(--cyber-cut-md) 100%,
+    0 calc(100% - var(--cyber-cut-md))
   );
-  transform: scale(0.95) translateY(8px);
-  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.cyber-lock-backdrop.open .cyber-lock-dialog {
-  transform: scale(1) translateY(0);
 }
 
 .cyber-lock-hazard-bar {
@@ -1980,32 +1983,123 @@ html.app-locked .pin-gate {
   opacity: 1;
 }
 
-.cyber-search-panel {
+.cyber-frame-wrap {
+  position: relative;
   width: 100%;
-  max-width: 580px;
-  max-height: min(74dvh, 540px);
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-surface);
+  padding: 26px 24px 28px;
+  background-color: var(--cyber-hud-frame-bg);
   background-image: var(--cyber-grid);
   background-size: 20px 20px;
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--cyber-hud-frame-border);
+  box-shadow: var(--cyber-lock-glow);
   overflow: hidden;
   clip-path: polygon(
     0 0,
-    calc(100% - var(--cyber-cut-lg)) 0,
-    100% var(--cyber-cut-lg),
-    100% 100%,
-    var(--cyber-cut-lg) 100%,
-    0 calc(100% - var(--cyber-cut-lg))
+    calc(100% - 22px) 0,
+    100% 22px,
+    100% calc(100% - 18px),
+    calc(100% - 18px) 100%,
+    14px 100%,
+    0 calc(100% - 14px)
   );
+}
+
+.card.cyber-frame-wrap {
+  background-color: var(--hud-bg);
+  padding: 28px 24px 30px;
+  box-shadow: var(--hud-shadow);
+}
+
+.card.cyber-frame-wrap::before {
+  display: none;
+}
+
+.cyber-search-frame {
+  max-width: 640px;
   transform: translateY(-10px) scale(0.98);
   transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.cyber-search-backdrop.open .cyber-search-panel {
+.cyber-search-backdrop.open .cyber-search-frame {
   transform: translateY(0) scale(1);
+}
+
+.cyber-frame-ornament {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  display: block;
+}
+
+.cyber-frame-tl {
+  top: 0;
+  left: 0;
+  width: 170px;
+  height: 40px;
+}
+
+.cyber-frame-top-trace {
+  top: 4px;
+  left: 185px;
+  width: 160px;
+  height: 26px;
+}
+
+.cyber-frame-tr-reticle {
+  top: 10px;
+  right: 26px;
+  width: 28px;
+  height: 28px;
+}
+
+.cyber-frame-left {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 120px;
+}
+
+.cyber-frame-right {
+  top: 48%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 155px;
+}
+
+.cyber-frame-bl {
+  bottom: 0;
+  left: 0;
+  width: 200px;
+  height: 28px;
+}
+
+.cyber-frame-br {
+  bottom: 4px;
+  right: 22px;
+  width: 126px;
+  height: 22px;
+}
+
+.cyber-search-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: min(70dvh, 490px);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  overflow: hidden;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cyber-cut-md)) 0,
+    100% var(--cyber-cut-md),
+    100% 100%,
+    var(--cyber-cut-md) 100%,
+    0 calc(100% - var(--cyber-cut-md))
+  );
 }
 
 .cyber-search-panel::before {
@@ -2197,6 +2291,40 @@ html.app-locked .pin-gate {
 @media (max-width: 640px) {
   .cyber-search-backdrop {
     padding-top: max(18px, calc(var(--safe-top) + 12px));
+  }
+  .cyber-frame-wrap,
+  .card.cyber-frame-wrap {
+    padding: 24px 16px 26px;
+  }
+  .cyber-frame-tl {
+    width: 132px;
+    height: 31px;
+  }
+  .cyber-frame-top-trace {
+    display: none;
+  }
+  .cyber-frame-tr-reticle {
+    top: 8px;
+    right: 18px;
+    width: 22px;
+    height: 22px;
+  }
+  .cyber-frame-left {
+    width: 12px;
+    height: 92px;
+  }
+  .cyber-frame-right {
+    width: 18px;
+    height: 120px;
+  }
+  .cyber-frame-bl {
+    width: 150px;
+    height: 22px;
+  }
+  .cyber-frame-br {
+    right: 14px;
+    width: 100px;
+    height: 18px;
   }
   .cyber-search-foot,
   .cyber-search-kbd {

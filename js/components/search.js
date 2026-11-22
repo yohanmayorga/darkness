@@ -1,5 +1,6 @@
 import { getStore } from '../services/db.js?v=6.9.0';
 import { icon } from './icons.js?v=3.3.0';
+import { hudFrameOrnaments } from './hudFrame.js?v=1.0.0';
 
 function normalizeText(value) {
   return String(value || '')
@@ -272,23 +273,26 @@ export function initGlobalSearch(navItems) {
     backdrop.className = 'cyber-search-backdrop';
     backdrop.setAttribute('role', 'presentation');
     backdrop.innerHTML = `
-      <div class="cyber-search-panel" role="dialog" aria-modal="true" aria-label="Buscador global">
-        <div class="cyber-search-head">
-          <span class="cyber-search-icon">${icon('search')}</span>
-          <input
-            type="text"
-            id="cyber-search-input"
-            class="cyber-search-input"
-            placeholder="Buscar vistas, hábitos, tareas, libros, diario, finanzas..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <span class="cyber-search-kbd">ESC</span>
-        </div>
-        <div class="cyber-search-results" id="cyber-search-results"></div>
-        <div class="cyber-search-foot">
-          <span>↑↓ NAVEGAR · ENTER ABRIR</span>
-          <span>HUD.SEARCH // CTRL+K</span>
+      <div class="cyber-search-frame cyber-frame-wrap" role="dialog" aria-modal="true" aria-label="Buscador global">
+        ${hudFrameOrnaments()}
+        <div class="cyber-search-panel">
+          <div class="cyber-search-head">
+            <span class="cyber-search-icon">${icon('search')}</span>
+            <input
+              type="text"
+              id="cyber-search-input"
+              class="cyber-search-input"
+              placeholder="Buscar vistas, hábitos, tareas, libros, diario, finanzas..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <span class="cyber-search-kbd">ESC</span>
+          </div>
+          <div class="cyber-search-results" id="cyber-search-results"></div>
+          <div class="cyber-search-foot">
+            <span>↑↓ NAVEGAR · ENTER ABRIR</span>
+            <span>HUD.SEARCH // CTRL+K</span>
+          </div>
         </div>
       </div>
     `;

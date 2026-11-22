@@ -199,9 +199,81 @@ function unlockAppAndInit() {
   }
 }
 
-window.lockDarknessApp = () => {
+function executeLock() {
   sessionStorage.removeItem(PIN_UNLOCKED_KEY);
   location.reload();
+}
+
+function openLockConfirmModal() {
+  const existing = document.getElementById('cyber-lock-modal');
+  if (existing) existing.remove();
+
+  const backdrop = document.createElement('div');
+  backdrop.id = 'cyber-lock-modal';
+  backdrop.className = 'cyber-lock-backdrop';
+  backdrop.setAttribute('role', 'presentation');
+  backdrop.innerHTML = `
+    <div class="cyber-lock-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cyber-lock-title" aria-describedby="cyber-lock-desc">
+      <div class="cyber-lock-hazard-bar" aria-hidden="true"></div>
+      <div class="cyber-lock-hud-bar" aria-hidden="true">
+        <span class="cyber-lock-code"><span class="cyber-lock-dot"></span> SEC-09 // LOCKDOWN</span>
+        <span class="cyber-lock-tag">ADVERTENCIA</span>
+      </div>
+      <div class="cyber-lock-body">
+        <div class="cyber-lock-emblem" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="0.75" stroke-dasharray="2 2" opacity="0.55"/>
+            <circle cx="12" cy="12" r="2.1"/>
+            <path d="M10.1 8.71 L7.2 3.69 A9.6 9.6 0 0 1 16.8 3.69 L13.9 8.71 A3.8 3.8 0 0 0 10.1 8.71 Z" transform="rotate(60 12 12)"/>
+            <path d="M10.1 8.71 L7.2 3.69 A9.6 9.6 0 0 1 16.8 3.69 L13.9 8.71 A3.8 3.8 0 0 0 10.1 8.71 Z" transform="rotate(180 12 12)"/>
+            <path d="M10.1 8.71 L7.2 3.69 A9.6 9.6 0 0 1 16.8 3.69 L13.9 8.71 A3.8 3.8 0 0 0 10.1 8.71 Z" transform="rotate(300 12 12)"/>
+          </svg>
+        </div>
+        <h3 class="cyber-lock-title" id="cyber-lock-title">¿Bloquear terminal?</h3>
+        <p class="cyber-lock-desc" id="cyber-lock-desc">Se bloqueará la sesión actual y necesitarás tu clave de acceso para volver a entrar.</p>
+        <span class="cyber-lock-meta">SYS.LOCK // PROTOCOLO DE SEGURIDAD</span>
+      </div>
+      <div class="cyber-lock-actions">
+        <button type="button" class="btn btn-secondary" id="cyber-lock-cancel">Cancelar</button>
+        <button type="button" class="btn cyber-lock-confirm-btn" id="cyber-lock-confirm">Sí, bloquear</button>
+      </div>
+      <div class="cyber-lock-hazard-bar" aria-hidden="true"></div>
+    </div>
+  `;
+
+  const closeModal = () => {
+    document.removeEventListener('keydown', onKeyDown);
+    backdrop.classList.remove('open');
+    setTimeout(() => backdrop.remove(), 170);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      closeModal();
+    }
+  };
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeModal();
+  });
+
+  backdrop.querySelector('#cyber-lock-cancel')?.addEventListener('click', closeModal);
+  backdrop.querySelector('#cyber-lock-confirm')?.addEventListener('click', () => {
+    closeModal();
+    executeLock();
+  });
+
+  document.addEventListener('keydown', onKeyDown);
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => {
+    backdrop.classList.add('open');
+    backdrop.querySelector('#cyber-lock-cancel')?.focus();
+  });
+}
+
+window.lockDarknessApp = () => {
+  openLockConfirmModal();
 };
 
 function initPinGate() {

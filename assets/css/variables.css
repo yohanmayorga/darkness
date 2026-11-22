@@ -31,6 +31,11 @@
   --cyber-yellow-border: rgba(245, 230, 66, 0.45);
   --cyber-clock-fg: #F4F4F5;
   --cyber-clock-muted: #A1A1AA;
+  --cyber-lock-backdrop: rgba(4, 4, 7, 0.56);
+  --cyber-lock-scanline: rgba(255, 255, 255, 0.025);
+  --cyber-lock-hazard: repeating-linear-gradient(-45deg, rgba(245, 230, 66, 0.92) 0 6px, #07070A 6px 12px);
+  --cyber-lock-glow: 0 0 28px rgba(245, 230, 66, 0.16), 0 20px 50px rgba(0, 0, 0, 0.85);
+  --cyber-lock-ring: rgba(245, 230, 66, 0.28);
 
   /* Patrones HUD / Distópicos */
   --cyber-grid: linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
@@ -134,6 +139,11 @@
   --cyber-yellow-border: rgba(9, 9, 11, 0.45);
   --cyber-clock-fg: #F4F4F5;
   --cyber-clock-muted: #A1A1AA;
+  --cyber-lock-backdrop: rgba(215, 215, 224, 0.52);
+  --cyber-lock-scanline: rgba(0, 0, 0, 0.025);
+  --cyber-lock-hazard: repeating-linear-gradient(-45deg, #F5E642 0 6px, #09090B 6px 12px);
+  --cyber-lock-glow: 0 0 24px rgba(9, 9, 11, 0.10), 0 20px 44px rgba(0, 0, 0, 0.22);
+  --cyber-lock-ring: rgba(9, 9, 11, 0.22);
 
   /* Patrones HUD / Distópicos */
   --cyber-grid: linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),

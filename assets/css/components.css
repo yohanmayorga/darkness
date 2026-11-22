@@ -1765,3 +1765,195 @@ html.app-locked .pin-gate {
   border-radius: 10px;
   display: block;
 }
+
+/* ==========================================
+   Alerta Cyberpunk de Confirmación de Bloqueo
+   ========================================== */
+.cyber-lock-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background-color: var(--cyber-lock-backdrop);
+  backdrop-filter: blur(10px) saturate(110%);
+  -webkit-backdrop-filter: blur(10px) saturate(110%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, var(--safe-top)) 16px max(16px, var(--safe-bottom));
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cyber-lock-backdrop.open {
+  opacity: 1;
+}
+
+.cyber-lock-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 410px;
+  background-color: var(--bg-surface);
+  background-image:
+    var(--cyber-grid),
+    repeating-linear-gradient(0deg, transparent 0 2px, var(--cyber-lock-scanline) 2px 4px);
+  background-size: 20px 20px, 100% 4px;
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--cyber-lock-glow);
+  overflow: hidden;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cyber-cut-lg)) 0,
+    100% var(--cyber-cut-lg),
+    100% 100%,
+    var(--cyber-cut-lg) 100%,
+    0 calc(100% - var(--cyber-cut-lg))
+  );
+  transform: scale(0.95) translateY(8px);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cyber-lock-backdrop.open .cyber-lock-dialog {
+  transform: scale(1) translateY(0);
+}
+
+.cyber-lock-hazard-bar {
+  height: 6px;
+  width: 100%;
+  background-image: var(--cyber-lock-hazard);
+}
+
+.cyber-lock-hud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 18px;
+  background-color: var(--hud-bg-header);
+  border-bottom: 1px dashed var(--border-default);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.cyber-lock-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cyber-lock-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--cyber-yellow);
+  box-shadow: 0 0 8px var(--cyber-yellow);
+  animation: cyberLockPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes cyberLockPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.cyber-lock-tag {
+  padding: 2px 7px;
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border: 1px solid var(--cyber-yellow-border);
+  font-size: 0.64rem;
+  font-weight: 500;
+}
+
+.cyber-lock-body {
+  padding: 24px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.cyber-lock-emblem {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border: 1px solid var(--cyber-yellow-border);
+  clip-path: polygon(
+    14px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0 calc(100% - 14px),
+    0 14px
+  );
+  box-shadow: 0 0 0 4px var(--cyber-lock-ring);
+}
+
+.cyber-lock-emblem svg {
+  width: 40px;
+  height: 40px;
+}
+
+.cyber-lock-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.cyber-lock-desc {
+  margin: 0;
+  max-width: 320px;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.cyber-lock-meta {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.cyber-lock-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 0 22px 22px;
+}
+
+.cyber-lock-actions .btn {
+  min-height: 44px;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cyber-lock-confirm-btn {
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border: 1px solid var(--cyber-yellow-border);
+  font-weight: 600;
+}
+
+.cyber-lock-confirm-btn:hover,
+.cyber-lock-confirm-btn:focus-visible {
+  filter: brightness(1.12);
+  box-shadow: 0 0 14px var(--cyber-yellow-border);
+}

@@ -9,6 +9,7 @@ import {
 } from './services/auth.js?v=6.9.0';
 import { icon } from './components/icons.js?v=3.3.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=6.9.0';
+import { initGlobalSearch } from './components/search.js?v=1.0.0';
 
 const THEME_KEY = 'darkness_theme';
 const SIDEBAR_KEY = 'darkness_sidebar_collapsed';
@@ -30,6 +31,10 @@ function applyTheme(theme) {
   const valid = theme === 'dark' ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', valid);
   localStorage.setItem(THEME_KEY, valid);
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', valid === 'dark' ? '#07070A' : '#E6E6EC');
+  }
   updateThemeButtons(valid);
   window.dispatchEvent(new CustomEvent('darkness:theme-changed', { detail: { theme: valid } }));
 }
@@ -127,6 +132,9 @@ function initShell() {
     btn.innerHTML = icon('lock');
     btn.addEventListener('click', () => window.lockDarknessApp());
   });
+
+  // 3b. Buscador Global / Paleta de Comandos (Ctrl+K / Cmd+K y botón lupa)
+  initGlobalSearch(NAV_ITEMS);
 
   // 4. Botón móvil de Memento Mori (al lado del icono de luna/sol)
   const mobileMementoBtn = document.getElementById('btn-mobile-memento');

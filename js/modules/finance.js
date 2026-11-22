@@ -9,25 +9,48 @@ let txFilter = 'all';
 let chartScope = 'month';
 const calState = { year: null, month: null, selectedDate: '' };
 
-const FINANCE_CATEGORIES = [
-  'Alimentación',
-  'Gimnasio',
-  'Inversión y ahorros',
-  'Ingresos principales',
-  'Ingresos extras',
-  'Transporte',
-  'Teléfono',
-  'Suscripciones',
-  'Pago de deudas',
-  'Ropa y calzado',
-  'Salidas',
-  'Regalos',
-  'Compras menores',
-  'No recuerdo',
-  'Otro'
-];
+const DEFAULT_FINANCE_CATEGORIES = {
+  expense: [
+    'Alimentación',
+    'Gimnasio',
+    'Cuidado personal',
+    'Transporte',
+    'Teléfono',
+    'Suscripciones',
+    'Pago de deudas',
+    'Ropa y calzado',
+    'Salidas',
+    'Regalos',
+    'Compras menores',
+    'No recuerdo',
+    'Otro'
+  ],
+  income: [
+    'Inversión y ahorros',
+    'Ingresos principales',
+    'Ingresos extras',
+    'Cobro de deuda',
+    'Regalos',
+    'Otro'
+  ]
+};
 
 const ACCOUNT_KEYS = ['bank', 'binance', 'bolivares', 'cash', 'other'];
+
+function sanitizeCategoryList(list, fallback) {
+  if (!Array.isArray(list) || list.length === 0) return [...fallback];
+  const seen = new Set();
+  const clean = [];
+  list.forEach(item => {
+    const name = String(item || '').trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    clean.push(name);
+  });
+  return clean.length > 0 ? clean : [...fallback];
+}
 
 function ensureFinance(store) {
   if (!store.finance || typeof store.finance !== 'object') {
@@ -42,12 +65,27 @@ function ensureFinance(store) {
   ACCOUNT_KEYS.forEach(k => {
     f.accounts[k] = Number(f.accounts[k]) || 0;
   });
+  if (!f.categories || typeof f.categories !== 'object') {
+    f.categories = {
+      expense: [...DEFAULT_FINANCE_CATEGORIES.expense],
+      income: [...DEFAULT_FINANCE_CATEGORIES.income]
+    };
+  } else {
+    f.categories.expense = sanitizeCategoryList(f.categories.expense, DEFAULT_FINANCE_CATEGORIES.expense);
+    f.categories.income = sanitizeCategoryList(f.categories.income, DEFAULT_FINANCE_CATEGORIES.income);
+  }
   if (!Array.isArray(f.receivables)) f.receivables = [];
   if (!Array.isArray(f.projectedIncome)) f.projectedIncome = [];
   if (!Array.isArray(f.projectedExpenses)) f.projectedExpenses = [];
   if (!Array.isArray(f.debts)) f.debts = [];
   if (!Array.isArray(store.transactions)) store.transactions = [];
   return f;
+}
+
+function getCategoriesByType(store, type) {
+  const f = ensureFinance(store);
+  const key = type === 'income' ? 'income' : 'expense';
+  return f.categories[key];
 }
 
 function getAccountLabel(key) {
@@ -138,6 +176,9 @@ export function renderFinance(container) {
         <p class="page-subtitle">Saldos actuales, cuentas por cobrar, proyecciones, deudas e historial de gastos.</p>
       </div>
       <div class="page-actions">
+        <button type="button" class="btn btn-secondary" id="btn-manage-categories">
+          ${icon('settings')} Categorías
+        </button>
         <button type="button" class="btn btn-primary" id="btn-new-tx">
           ${icon('plus')} Registrar Movimiento
         </button>
@@ -510,6 +551,14 @@ export function renderFinance(container) {
     });
   });
 
+  // Panel de control de categorías
+  const manageCatBtn = container.querySelector('#btn-manage-categories');
+  if (manageCatBtn) {
+    manageCatBtn.addEventListener('click', () => {
+      openCategoriesManagerModal('expense', () => renderFinance(container));
+    });
+  }
+
   // Registrar nuevo movimiento (solo historial y gráfica, no altera cuentas)
   const newBtn = container.querySelector('#btn-new-tx');
   if (newBtn) {
@@ -630,7 +679,13 @@ function openListItemModal(listKey, currency, onDone, existingItem = null) {
   });
 }
 
-function openNewTxModal(currency, onDone) {
+function openNewTxModal(currency, onDone, initialType = 'expense') {
+  const safeType = initialType === 'income' ? 'income' : 'expense';
+  const initialCategories = getCategoriesByType(getStore(), safeType);
+
+  const buildCategoryOptionsHTML = (cats) =>
+    cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
   openModal({
     title: 'Registrar Movimiento (Historial)',
     contentHTML: `
@@ -639,8 +694,8 @@ function openNewTxModal(currency, onDone) {
           <div class="form-group">
             <label class="form-label">Tipo</label>
             <select name="type" class="form-select">
-              <option value="expense">Gasto (-)</option>
-              <option value="income">Ingreso (+)</option>
+              <option value="expense" ${safeType === 'expense' ? 'selected' : ''}>Gasto (-)</option>
+              <option value="income" ${safeType === 'income' ? 'selected' : ''}>Ingreso (+)</option>
             </select>
           </div>
           <div class="form-group">
@@ -652,9 +707,12 @@ function openNewTxModal(currency, onDone) {
             <input type="number" step="any" min="1" name="amount" class="form-input" placeholder="0" required />
           </div>
           <div class="form-group">
-            <label class="form-label">Categoría</label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <label class="form-label" style="margin-bottom:0;">Categoría</label>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-tx-manage-cats" style="min-height:24px;height:24px;padding:0 6px;font-size:0.72rem;">Gestionar</button>
+            </div>
             <select name="category" class="form-select">
-              ${FINANCE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+              ${buildCategoryOptionsHTML(initialCategories)}
             </select>
           </div>
           <div class="form-group full">
@@ -669,6 +727,25 @@ function openNewTxModal(currency, onDone) {
       </form>
     `,
     onMount: (modal) => {
+      const typeSelect = modal.querySelector('select[name="type"]');
+      const categorySelect = modal.querySelector('select[name="category"]');
+
+      typeSelect.addEventListener('change', () => {
+        const cats = getCategoriesByType(getStore(), typeSelect.value);
+        categorySelect.innerHTML = buildCategoryOptionsHTML(cats);
+      });
+
+      const manageBtn = modal.querySelector('#btn-tx-manage-cats');
+      if (manageBtn) {
+        manageBtn.addEventListener('click', () => {
+          const currentType = typeSelect.value;
+          openCategoriesManagerModal(currentType, () => {
+            if (typeof onDone === 'function') onDone();
+            openNewTxModal(currency, onDone, currentType);
+          });
+        });
+      }
+
       modal.querySelector('#cancel-tx').addEventListener('click', closeModal);
       modal.querySelector('#form-tx').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -690,6 +767,219 @@ function openNewTxModal(currency, onDone) {
         showToast('Movimiento guardado en el historial');
         onDone();
       });
+    }
+  });
+}
+
+function openCategoriesManagerModal(initialType = 'expense', onDone = null) {
+  let activeType = initialType === 'income' ? 'income' : 'expense';
+  let editingCat = null;
+
+  openModal({
+    title: 'Panel de Control · Categorías',
+    contentHTML: '<div id="fin-cat-manager-root"></div>',
+    onMount: (modal) => {
+      const root = modal.querySelector('#fin-cat-manager-root');
+
+      const finish = () => {
+        closeModal();
+        if (typeof onDone === 'function') onDone();
+      };
+
+      const renderManager = () => {
+        const current = getStore();
+        const f = ensureFinance(current);
+        const categories = f.categories[activeType];
+        const usageCount = new Map();
+        current.transactions.forEach(tx => {
+          if (tx.type !== activeType) return;
+          const key = tx.category || '';
+          usageCount.set(key, (usageCount.get(key) || 0) + 1);
+        });
+
+        root.innerHTML = `
+          <div class="filter-tabs" style="margin-bottom:12px;">
+            <button type="button" class="filter-tab ${activeType === 'expense' ? 'active' : ''}" data-cat-tab="expense">
+              Gastos (${f.categories.expense.length})
+            </button>
+            <button type="button" class="filter-tab ${activeType === 'income' ? 'active' : ''}" data-cat-tab="income">
+              Ingresos (${f.categories.income.length})
+            </button>
+          </div>
+
+          <form id="form-add-cat" style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" name="catName" class="form-input" placeholder="Nueva categoría de ${activeType === 'income' ? 'ingreso' : 'gasto'}..." required style="flex:1;" />
+            <button type="submit" class="btn btn-primary btn-sm">${icon('plus')} Agregar</button>
+          </form>
+
+          <div class="finance-items-list" style="max-height:280px;">
+            ${categories.map(cat => {
+              const count = usageCount.get(cat) || 0;
+              if (editingCat === cat) {
+                return `
+                  <form class="finance-list-item" data-edit-cat-form="${escapeHtml(cat)}" style="gap:6px;">
+                    <input type="text" name="newCatName" class="form-input" value="${escapeHtml(cat)}" required style="flex:1;min-height:32px;height:32px;font-size:0.84rem;" />
+                    <button type="submit" class="btn-icon" title="Guardar" aria-label="Guardar" style="width:28px;height:28px;">
+                      ${icon('check')}
+                    </button>
+                    <button type="button" class="btn-icon" data-cancel-edit-cat title="Cancelar" aria-label="Cancelar" style="width:28px;height:28px;">
+                      ${icon('close')}
+                    </button>
+                  </form>
+                `;
+              }
+              return `
+                <div class="finance-list-item">
+                  <div class="finance-list-item-info">
+                    <div class="finance-list-item-title">${escapeHtml(cat)}</div>
+                    <div class="finance-list-item-meta">${count} movimiento(s)</div>
+                  </div>
+                  <div class="finance-list-item-right">
+                    <button type="button" class="btn-icon" data-start-edit-cat="${escapeHtml(cat)}" title="Renombrar" aria-label="Renombrar" style="width:28px;height:28px;">
+                      ${icon('edit')}
+                    </button>
+                    <button type="button" class="btn-icon" data-del-cat="${escapeHtml(cat)}" title="Eliminar" aria-label="Eliminar" style="width:28px;height:28px;">
+                      ${icon('trash')}
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="modal-footer" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-reset-cats">Restaurar predeterminadas</button>
+            <button type="button" class="btn btn-secondary" id="btn-close-cats">Listo</button>
+          </div>
+        `;
+
+        root.querySelectorAll('[data-cat-tab]').forEach(tab => {
+          tab.addEventListener('click', () => {
+            activeType = tab.getAttribute('data-cat-tab');
+            editingCat = null;
+            renderManager();
+          });
+        });
+
+        root.querySelector('#form-add-cat').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const input = e.target.querySelector('input[name="catName"]');
+          const newName = String(input.value || '').trim();
+          if (!newName) return;
+
+          const st = getStore();
+          const fin = ensureFinance(st);
+          const list = fin.categories[activeType];
+          const exists = list.some(c => c.toLowerCase() === newName.toLowerCase());
+          if (exists) {
+            showToast('Esa categoría ya existe en esta lista');
+            return;
+          }
+
+          list.push(newName);
+          saveStore(st);
+          showToast('Categoría agregada');
+          renderManager();
+        });
+
+        root.querySelectorAll('[data-start-edit-cat]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            editingCat = btn.getAttribute('data-start-edit-cat');
+            renderManager();
+            const editInput = root.querySelector('input[name="newCatName"]');
+            if (editInput) {
+              editInput.focus();
+              editInput.select();
+            }
+          });
+        });
+
+        const cancelEditBtn = root.querySelector('[data-cancel-edit-cat]');
+        if (cancelEditBtn) {
+          cancelEditBtn.addEventListener('click', () => {
+            editingCat = null;
+            renderManager();
+          });
+        }
+
+        const editForm = root.querySelector('[data-edit-cat-form]');
+        if (editForm) {
+          editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const oldName = editForm.getAttribute('data-edit-cat-form');
+            const newName = String(editForm.querySelector('input[name="newCatName"]').value || '').trim();
+            if (!newName) return;
+
+            if (newName === oldName) {
+              editingCat = null;
+              renderManager();
+              return;
+            }
+
+            const st = getStore();
+            const fin = ensureFinance(st);
+            const list = fin.categories[activeType];
+            const duplicate = list.some(c => c !== oldName && c.toLowerCase() === newName.toLowerCase());
+            if (duplicate) {
+              showToast('Ya existe otra categoría con ese nombre');
+              return;
+            }
+
+            fin.categories[activeType] = list.map(c => (c === oldName ? newName : c));
+            st.transactions.forEach(tx => {
+              if (tx.type === activeType && tx.category === oldName) {
+                tx.category = newName;
+              }
+            });
+
+            saveStore(st);
+            editingCat = null;
+            showToast('Categoría actualizada');
+            renderManager();
+          });
+        }
+
+        root.querySelectorAll('[data-del-cat]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const catName = btn.getAttribute('data-del-cat');
+            const st = getStore();
+            const fin = ensureFinance(st);
+            if (fin.categories[activeType].length <= 1) {
+              showToast('Debe quedar al menos una categoría');
+              return;
+            }
+            if (!window.confirm(`¿Eliminar la categoría "${catName}"?`)) return;
+
+            fin.categories[activeType] = fin.categories[activeType].filter(c => c !== catName);
+            saveStore(st);
+            showToast('Categoría eliminada');
+            renderManager();
+          });
+        });
+
+        root.querySelector('#btn-reset-cats').addEventListener('click', () => {
+          const label = activeType === 'income' ? 'Ingresos' : 'Gastos';
+          if (!window.confirm(`¿Restaurar las categorías predeterminadas de ${label}?`)) return;
+          const st = getStore();
+          const fin = ensureFinance(st);
+          fin.categories[activeType] = [...DEFAULT_FINANCE_CATEGORIES[activeType]];
+          saveStore(st);
+          editingCat = null;
+          showToast(`Categorías de ${label} restauradas`);
+          renderManager();
+        });
+
+        root.querySelector('#btn-close-cats').addEventListener('click', finish);
+      };
+
+      const modalCloseBtn = modal.querySelector('#modal-close-btn');
+      if (modalCloseBtn && typeof onDone === 'function') {
+        modalCloseBtn.addEventListener('click', () => {
+          onDone();
+        });
+      }
+
+      renderManager();
     }
   });
 }

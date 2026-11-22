@@ -73,9 +73,15 @@
 .app-shell.sidebar-collapsed .nav-label,
 .app-shell.sidebar-collapsed .user-meta,
 .app-shell.sidebar-collapsed .sync-badge-text,
-.app-shell.sidebar-collapsed .sidebar-hud-bar,
+.app-shell.sidebar-collapsed .sidebar-hud-bar .cyber-barcode,
+.app-shell.sidebar-collapsed .sidebar-hud-bar .cyber-tag,
 .app-shell.sidebar-collapsed .cyber-hazard-divider {
   display: none;
+}
+
+.app-shell.sidebar-collapsed .sidebar-hud-bar {
+  justify-content: center;
+  padding: 5px 4px;
 }
 
 .sidebar-hud-bar {
@@ -115,6 +121,7 @@
   font-size: 0.65rem;
   letter-spacing: 1px;
   color: var(--text-muted);
+  animation: cyberPulseSoft 3.2s ease-in-out infinite;
 }
 
 .sidebar-nav {
@@ -169,6 +176,7 @@
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--text-secondary);
+  animation: cyberChevronNudge 2.4s ease-in-out infinite;
 }
 
 [data-theme="light"] .sidebar .nav-item.active::after {
@@ -194,6 +202,12 @@
   gap: 6px;
 }
 
+.app-shell.sidebar-collapsed .sidebar-actions {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
 .user-pill {
   display: flex;
   align-items: center;
@@ -203,6 +217,11 @@
   background-color: var(--bg-surface-elevated);
   border: 1px solid var(--border-subtle);
   overflow: hidden;
+}
+
+.app-shell.sidebar-collapsed .user-pill {
+  justify-content: center;
+  padding: 6px;
 }
 
 .user-avatar {
@@ -518,6 +537,19 @@
   clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 5px 100%, 0 calc(100% - 5px));
 }
 
+.page-eyebrow::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  background-color: currentColor;
+  flex-shrink: 0;
+  animation: cyberCursorBlink 2.2s steps(2, start) infinite;
+}
+
+.main-content > * {
+  animation: hudViewEnter 0.22s ease-out;
+}
+
 .page-title {
   font-family: var(--font-display);
   font-size: 1.42rem;
@@ -694,5 +726,109 @@
 @media (max-width: 420px) {
   .grid-kpi {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================
+   Animaciones Cyberpunk HUD (Sutiles)
+   ========================================== */
+@keyframes hudViewEnter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cyberPulseSoft {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+@keyframes cyberChevronNudge {
+  0%, 100% { transform: translateX(0); opacity: 0.7; }
+  50% { transform: translateX(2px); opacity: 1; }
+}
+
+@keyframes cyberCursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.cyber-rad-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border: 1px solid var(--cyber-yellow-border);
+  flex-shrink: 0;
+  animation: cyberRadFlicker 3.6s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+}
+
+.cyber-rad-icon {
+  display: block;
+  filter: drop-shadow(0 0 3px var(--cyber-yellow-border));
+}
+
+.cyber-rad-badge.is-glitching {
+  animation: cyberRadGlitch 0.34s steps(2, end) both;
+}
+
+@keyframes cyberRadFlicker {
+  0%, 100% { opacity: 1; }
+  18% { opacity: 0.78; }
+  22% { opacity: 0.96; }
+  54% { opacity: 0.65; }
+  57% { opacity: 0.98; }
+  82% { opacity: 0.84; }
+}
+
+@keyframes cyberRadGlitch {
+  0% {
+    transform: translate(0, 0) skewX(0deg);
+    filter: none;
+    opacity: 1;
+  }
+  20% {
+    transform: translate(-2px, 1px) skewX(-12deg);
+    filter: drop-shadow(2px 0 0 var(--status-danger)) drop-shadow(-2px 0 0 var(--status-info));
+    opacity: 0.75;
+  }
+  40% {
+    transform: translate(2px, -1px) skewX(10deg);
+    filter: drop-shadow(-2px 0 0 var(--status-danger)) drop-shadow(2px 0 0 var(--status-info));
+    opacity: 0.95;
+  }
+  60% {
+    transform: translate(-1px, 0) skewX(-6deg);
+    filter: drop-shadow(1px 0 0 var(--cyber-yellow));
+    opacity: 0.55;
+  }
+  80% {
+    transform: translate(1px, 1px) skewX(4deg);
+    filter: drop-shadow(-1px 0 0 var(--status-info));
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(0, 0) skewX(0deg);
+    filter: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber-hazard-chevrons,
+  .nav-item.active::after,
+  .page-eyebrow::before,
+  .main-content > *,
+  .cyber-rad-badge,
+  .cyber-rad-badge.is-glitching {
+    animation: none !important;
   }
 }

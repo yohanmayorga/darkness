@@ -136,6 +136,7 @@ function initShell() {
 
   // 3b. Buscador Global / Paleta de Comandos (Ctrl+K / Cmd+K y botón lupa)
   initGlobalSearch(NAV_ITEMS);
+  initCyberRadGlitch();
 
   // 4. Botón móvil de Memento Mori (al lado del icono de luna/sol)
   const mobileMementoBtn = document.getElementById('btn-mobile-memento');
@@ -379,6 +380,29 @@ function initPinGate() {
 
   updateSlots(0);
   requestAnimationFrame(() => input.focus());
+}
+
+function initCyberRadGlitch() {
+  const badge = document.getElementById('cyber-rad-badge');
+  if (!badge) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+
+  const scheduleNextGlitch = () => {
+    const delay = 3500 + Math.random() * 6500;
+    window.setTimeout(() => {
+      badge.classList.remove('is-glitching');
+      void badge.offsetWidth;
+      badge.classList.add('is-glitching');
+      window.setTimeout(() => {
+        badge.classList.remove('is-glitching');
+        scheduleNextGlitch();
+      }, 360);
+    }, delay);
+  };
+
+  scheduleNextGlitch();
 }
 
 async function bootstrapApp() {

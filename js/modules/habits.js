@@ -11,8 +11,8 @@ import {
   TIME_OF_DAY, TIME_ORDER, HABIT_CATEGORIES, HABIT_ICONS,
   isScheduled, isDone, offReason, dayStats, rangeSeries, aggregate,
   habitRate, habitStreak, bestStreak,
-  formatShort, formatLong, scheduleLabel, pctText, generateAdvice
-} from '../utils/habits.js?v=4.9.0';
+  formatShort, formatLong, scheduleLabel, pctText, generateAdvice, generateHabitSummary
+} from '../utils/habits.js?v=5.0.0';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const CAL_WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -24,7 +24,7 @@ const RANGES = [
 ];
 
 // Estado de la vista mientras navegas por la app
-const state = { selectedDate: null, calYear: null, calMonth: null, range: 'all', zoom: 1 };
+const state = { selectedDate: null, calYear: null, calMonth: null, range: 'all', zoom: 1, habitFilter: 'all' };
 
 const esc = v => escapeHTML(String(v ?? ''));
 
@@ -37,6 +37,11 @@ export function renderHabits(container) {
   const today = todayISO();
 
   if (!state.selectedDate || state.selectedDate > today) state.selectedDate = today;
+  if (state.habitFilter !== 'all' && !habits.some(h => h.id === state.habitFilter)) {
+    state.habitFilter = 'all';
+  }
+  const selectedHabit = state.habitFilter === 'all' ? null : habits.find(h => h.id === state.habitFilter) || null;
+  const chartHabits = selectedHabit ? [selectedHabit] : habits;
   if (state.calYear === null) {
     const d = parseISO(state.selectedDate);
     state.calYear = d.getFullYear();
@@ -60,7 +65,13 @@ export function renderHabits(container) {
       ${hudFrameOrnaments()}
       <div class="card-header" style="flex-wrap:wrap;gap:8px;">
         <h2 class="card-title">${icon('dashboard')} Evolución del cumplimiento</h2>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div class="habit-chart-controls">
+          ${habits.length ? `
+            <select id="select-habit-filter" class="habit-filter-select" aria-label="Filtrar gráfica por hábito">
+              <option value="all"${!selectedHabit ? ' selected' : ''}>Todos los hábitos</option>
+              ${habits.map(h => `<option value="${esc(h.id)}"${state.habitFilter === h.id ? ' selected' : ''}>${esc(h.name)}</option>`).join('')}
+            </select>
+          ` : ''}
           <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica">
             <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-out" title="Alejar zoom">−</button>
             <button type="button" class="btn btn-secondary btn-sm mono" id="btn-hc-zoom-reset" title="Restablecer zoom">${formatZoomLabel(state.zoom)}</button>
@@ -71,10 +82,11 @@ export function renderHabits(container) {
               <button type="button" class="habit-range-btn ${state.range === r.key ? 'active' : ''}" data-range="${r.key}">${r.label}</button>
             `).join('')}
           </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-hc-reset-filters" title="Restablecer hábito, rango y zoom">Borrar filtros</button>
         </div>
       </div>
-      ${buildChart(habits, today)}
-      ${buildAdvice(habits, today)}
+      ${buildChart(chartHabits, today, selectedHabit)}
+      ${buildAdvice(habits, today, selectedHabit)}
     </section>
 
     ${buildKpis(habits, today)}
@@ -94,7 +106,7 @@ export function renderHabits(container) {
 /* ==========================================================================
    Gráfica de evolución (barras diarias + media móvil de 7 días)
    ========================================================================== */
-function buildChart(habits, today) {
+function buildChart(habits, today, selectedHabit = null) {
   if (!habits.length) {
     return `<div class="empty-state">Crea tu primer hábito para empezar a medir tu evolución.</div>`;
   }
@@ -156,7 +168,7 @@ function buildChart(habits, today) {
   return `
     <div class="hc-summary">
       <span class="hc-summary-value mono">${pctText(summary.rate)}</span>
-      <span class="text-muted">promedio del período · <span class="mono">${summary.done}/${summary.total}</span> cumplidos</span>
+      <span class="text-muted">${selectedHabit ? `cumplimiento de <strong>${esc(selectedHabit.name)}</strong>` : 'promedio del período'} · <span class="mono">${summary.done}/${summary.total}</span> cumplidos</span>
     </div>
     <div class="hc-wrap">
       <div class="hc-yaxis mono" aria-hidden="true"><span>100%</span><span>50%</span><span>0%</span></div>
@@ -195,12 +207,17 @@ function buildChart(habits, today) {
   `;
 }
 
-function buildAdvice(habits, today) {
+function buildAdvice(habits, today, selectedHabit = null) {
   if (!habits.length) return '';
-  const tips = generateAdvice(habits, today);
+  const label = selectedHabit
+    ? `RESUMEN DEL HÁBITO · ${esc(selectedHabit.name).toUpperCase()}`
+    : 'CONSEJO DE HOY';
+  const tips = selectedHabit
+    ? generateHabitSummary(selectedHabit, today)
+    : generateAdvice(habits, today);
   return `
     <div class="habit-advice">
-      <span class="habit-advice-label mono">CONSEJO DE HOY</span>
+      <span class="habit-advice-label mono">${label}</span>
       ${tips.map(t => `<p>${t}</p>`).join('')}
     </div>
   `;
@@ -680,6 +697,18 @@ function bindEvents(container, today) {
 
   container.querySelector('#btn-manage-habits')?.addEventListener('click', () => openManageHabitsModal(container, today));
   container.querySelector('#btn-new-habit')?.addEventListener('click', () => openHabitForm(container));
+
+  container.querySelector('#select-habit-filter')?.addEventListener('change', (e) => {
+    state.habitFilter = e.target.value || 'all';
+    rerender();
+  });
+
+  container.querySelector('#btn-hc-reset-filters')?.addEventListener('click', () => {
+    state.habitFilter = 'all';
+    state.range = 'all';
+    state.zoom = 1;
+    rerender();
+  });
 
   container.querySelectorAll('[data-range]').forEach(btn => btn.addEventListener('click', () => {
     const v = btn.dataset.range;

@@ -1174,6 +1174,43 @@
   display: block;
 }
 
+.vitruvian-figure-spin {
+  transform-origin: 180px 154px;
+  animation: vitruvianSpinY 10s linear infinite;
+  will-change: transform;
+}
+
+.vitruvian-ring-spin {
+  transform-origin: 180px 154px;
+  animation: vitruvianRingSpin 28s linear infinite;
+  will-change: transform;
+}
+
+@keyframes vitruvianSpinY {
+  0% {
+    transform: perspective(680px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(680px) rotateY(360deg);
+  }
+}
+
+@keyframes vitruvianRingSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vitruvian-figure-spin,
+  .vitruvian-ring-spin {
+    animation: none;
+  }
+}
+
 .vitruvian-node {
   cursor: pointer;
   transition: opacity 0.16s ease;

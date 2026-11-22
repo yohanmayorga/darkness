@@ -104,7 +104,9 @@ function buildVitruvianCyberSVG(sorted, activeMetricKey) {
 
       <!-- Geometría Vitruviana: Círculo y Cuadrado -->
       <circle cx="180" cy="154" r="114" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" opacity="0.65" />
-      <circle cx="180" cy="154" r="119" fill="none" stroke="var(--hud-border)" stroke-width="0.75" stroke-dasharray="2 4" />
+      <g class="vitruvian-ring-spin">
+        <circle cx="180" cy="154" r="119" fill="none" stroke="var(--hud-border)" stroke-width="0.75" stroke-dasharray="2 4" />
+      </g>
       <rect x="76" y="48" width="208" height="216" fill="none" stroke="var(--hud-border)" stroke-width="0.9" opacity="0.7" />
 
       <!-- Ejes y marcas de proporción áurea -->
@@ -125,8 +127,10 @@ function buildVitruvianCyberSVG(sorted, activeMetricKey) {
         <line x1="263" y1="237" x2="258" y2="232" />
       </g>
 
-      <!-- Pose Secundaria Vitruvio (Wireframe Fantasma Cyberpunk) -->
-      <g fill="none" stroke="var(--hud-border-strong)" stroke-width="1.1" stroke-dasharray="3 2.5" opacity="0.55">
+      <!-- Figura Vitruviana Animada (giro 360° holográfico) -->
+      <g class="vitruvian-figure-spin">
+        <!-- Pose Secundaria Vitruvio (Wireframe Fantasma Cyberpunk) -->
+        <g fill="none" stroke="var(--hud-border-strong)" stroke-width="1.1" stroke-dasharray="3 2.5" opacity="0.55">
         <!-- Brazos elevados -->
         <polyline points="148,96 122,82 96,64" />
         <polyline points="212,96 238,82 264,64" />
@@ -179,6 +183,7 @@ function buildVitruvianCyberSVG(sorted, activeMetricKey) {
         <circle cx="193" cy="218" r="2.4" fill="var(--hud-bg)" />
         <line x1="166" y1="190" x2="167" y2="212" stroke="var(--hud-border-strong)" stroke-width="0.9" />
         <line x1="194" y1="190" x2="193" y2="212" stroke="var(--hud-border-strong)" stroke-width="0.9" />
+      </g>
       </g>
 
       <!-- NODO 1: GRASA CORPORAL (en la cara) -->

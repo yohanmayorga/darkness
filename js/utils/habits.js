@@ -330,3 +330,103 @@ export function generateAdvice(habits, today) {
 
   return tips.slice(0, 2);
 }
+
+/**
+ * Genera un resumen analítico de un hábito específico a lo largo del tiempo:
+ * tasa histórica, rachas, días más/menos frecuentes y variaciones importantes.
+ */
+export function generateHabitSummary(habit, today) {
+  const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const strong = text => `<strong>${escHtml(text)}</strong>`;
+  const lines = [];
+
+  const start = habit.startDate || today;
+  const end = habit.endDate && habit.endDate < today ? habit.endDate : today;
+  const overall = habitRate(habit, start, end);
+  const currentStreak = habitStreak(habit, today);
+  const maxStreak = bestStreak(habit, today);
+
+  if (!overall.total) {
+    return [`${strong(habit.name)} aún no tiene días programados registrados hasta hoy.`];
+  }
+
+  // 1. Panorama general y rachas
+  lines.push(
+    `${strong(habit.name)} acumula ${strong(pctText(overall.rate))} de cumplimiento (${overall.done}/${overall.total} días), con racha actual de ${strong(`${currentStreak}d`)} y mejor racha histórica de ${strong(`${maxStreak}d`)}.`
+  );
+
+  // 2. Días de la semana con mayor y menor frecuencia
+  const byWeekday = Array.from({ length: 7 }, (_, wd) => ({ wd, done: 0, total: 0 }));
+  const byMonth = new Map();
+  for (let cur = start; cur <= end; cur = addDays(cur, 1)) {
+    if (!isScheduled(habit, cur)) continue;
+    const done = isDone(habit, cur) ? 1 : 0;
+    const wd = weekdayOf(cur);
+    byWeekday[wd].total++;
+    byWeekday[wd].done += done;
+
+    const ym = cur.slice(0, 7);
+    const m = byMonth.get(ym) || { ym, done: 0, total: 0 };
+    m.total++;
+    m.done += done;
+    byMonth.set(ym, m);
+  }
+
+  const validDays = byWeekday
+    .filter(d => d.total >= 2)
+    .map(d => ({ ...d, rate: d.done / d.total }))
+    .sort((a, b) => b.rate - a.rate);
+
+  if (validDays.length >= 2) {
+    const best = validDays[0];
+    const worst = validDays[validDays.length - 1];
+    const gap = Math.round((best.rate - worst.rate) * 100);
+    if (gap >= 10) {
+      lines.push(
+        `Mayor frecuencia los ${strong(DAY_PLURAL[best.wd])} (${pctText(best.rate)}) y menor los ${strong(DAY_PLURAL[worst.wd])} (${pctText(worst.rate)}).`
+      );
+    } else {
+      lines.push(
+        `Frecuencia pareja durante la semana: entre ${pctText(worst.rate)} (${DAY_PLURAL[worst.wd]}) y ${pctText(best.rate)} (${DAY_PLURAL[best.wd]}).`
+      );
+    }
+  }
+
+  // 3. Variaciones importantes en el tiempo (últimos 14 días vs 14 previos, y meses destacados)
+  const variations = [];
+  const last14 = habitRate(habit, addDays(end, -13), end);
+  const prev14 = habitRate(habit, addDays(end, -27), addDays(end, -14));
+  if (last14.total >= 3 && prev14.total >= 3 && last14.rate !== null && prev14.rate !== null) {
+    const diff = Math.round((last14.rate - prev14.rate) * 100);
+    if (diff >= 12) {
+      variations.push(`subió ${strong(`+${diff} pts`)} en las últimas 2 semanas (${pctText(prev14.rate)} → ${pctText(last14.rate)})`);
+    } else if (diff <= -12) {
+      variations.push(`bajó ${strong(`${diff} pts`)} en las últimas 2 semanas (${pctText(prev14.rate)} → ${pctText(last14.rate)})`);
+    }
+  }
+
+  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const formatYM = ym => {
+    const [y, m] = ym.split('-');
+    return `${monthNames[Number(m) - 1] || m} ${y.slice(2)}`;
+  };
+  const validMonths = [...byMonth.values()]
+    .filter(m => m.total >= 5)
+    .map(m => ({ ...m, rate: m.done / m.total }))
+    .sort((a, b) => b.rate - a.rate);
+
+  if (validMonths.length >= 2) {
+    const topM = validMonths[0];
+    const lowM = validMonths[validMonths.length - 1];
+    if (Math.round((topM.rate - lowM.rate) * 100) >= 15) {
+      variations.push(`su pico fue en ${strong(formatYM(topM.ym))} (${pctText(topM.rate)}) y su punto más bajo en ${strong(formatYM(lowM.ym))} (${pctText(lowM.rate)})`);
+    }
+  }
+
+  if (variations.length) {
+    const joined = variations.join('; ');
+    lines.push(`Variaciones destacadas: ${joined}.`);
+  }
+
+  return lines;
+}

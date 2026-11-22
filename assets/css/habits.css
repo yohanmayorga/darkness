@@ -7,6 +7,33 @@
   margin-bottom: 18px;
 }
 
+.habit-chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.habit-filter-select {
+  min-height: 32px;
+  max-width: 210px;
+  padding: 0 26px 0 10px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.habit-filter-select:hover,
+.habit-filter-select:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
 .habit-range {
   display: inline-flex;
   gap: 2px;
@@ -720,6 +747,12 @@
   .habit-range-btn {
     min-height: 36px;
     padding: 0 12px;
+  }
+  .habit-filter-select {
+    min-height: 44px;
+    font-size: 16px;
+    max-width: 100%;
+    flex: 1 1 180px;
   }
   .hc-yaxis,
   .hc-svg {

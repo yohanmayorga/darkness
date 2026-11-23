@@ -2097,6 +2097,25 @@ html.app-locked .pin-gate {
 .cyber-lock-emblem svg {
   width: 40px;
   height: 40px;
+  transform-origin: center;
+  will-change: transform, filter;
+  animation:
+    cyberLockRadSpin 14s linear infinite,
+    cyberLockRadGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes cyberLockRadSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cyberLockRadGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px var(--cyber-lock-rad-glow-min));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px var(--cyber-lock-rad-glow-max));
+  }
 }
 
 .cyber-lock-title {
@@ -2547,7 +2566,8 @@ html.app-locked .pin-gate {
 
 @media (prefers-reduced-motion: reduce) {
   .card:hover::before,
-  .modal-backdrop.open .modal-panel {
+  .modal-backdrop.open .modal-panel,
+  .cyber-lock-emblem svg {
     animation: none !important;
   }
   .kpi-card:hover,

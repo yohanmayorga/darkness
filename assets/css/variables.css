@@ -36,6 +36,8 @@
   --cyber-lock-hazard: repeating-linear-gradient(-45deg, rgba(245, 230, 66, 0.92) 0 6px, #07070A 6px 12px);
   --cyber-lock-glow: 0 0 28px rgba(245, 230, 66, 0.16), 0 20px 50px rgba(0, 0, 0, 0.85);
   --cyber-lock-ring: rgba(245, 230, 66, 0.28);
+  --cyber-lock-rad-glow-min: rgba(245, 230, 66, 0.22);
+  --cyber-lock-rad-glow-max: rgba(245, 230, 66, 0.62);
   --cyber-hud-armor: #F5E642;
   --cyber-hud-armor-contrast: #07070A;
   --cyber-hud-line: rgba(255, 255, 255, 0.42);
@@ -150,6 +152,8 @@
   --cyber-lock-hazard: repeating-linear-gradient(-45deg, #F5E642 0 6px, #09090B 6px 12px);
   --cyber-lock-glow: 0 0 24px rgba(9, 9, 11, 0.10), 0 20px 44px rgba(0, 0, 0, 0.22);
   --cyber-lock-ring: rgba(9, 9, 11, 0.22);
+  --cyber-lock-rad-glow-min: rgba(245, 230, 66, 0.22);
+  --cyber-lock-rad-glow-max: rgba(245, 230, 66, 0.62);
   --cyber-hud-armor: #141418;
   --cyber-hud-armor-contrast: #F5E642;
   --cyber-hud-line: rgba(17, 17, 20, 0.36);

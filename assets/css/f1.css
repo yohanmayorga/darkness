@@ -1,0 +1,1386 @@
+/* ==========================================
+   Módulo Fórmula 1 — Estética Cyberpunk HUD + Colores F1
+   ========================================== */
+
+:root {
+  --f1-ferrari: #E8002D;
+  --f1-redbull: #3671C6;
+  --f1-mercedes: #27F4D2;
+  --f1-mclaren: #FF8000;
+  --f1-aston: #229971;
+  --f1-alpine: #FF87BC;
+  --f1-williams: #64C4FF;
+  --f1-rb: #6692FF;
+  --f1-haas: #B6BABD;
+  --f1-sauber: #52E252;
+  --f1-cadillac: #A1A1AA;
+  --f1-default: #E4E4E7;
+
+  --f1-map-bg: #08090D;
+  --f1-map-grid-line: rgba(255, 255, 255, 0.055);
+  --f1-map-equator: rgba(245, 230, 66, 0.16);
+  --f1-map-land: rgba(228, 228, 231, 0.10);
+  --f1-map-land-stroke: rgba(228, 228, 231, 0.28);
+  --f1-map-route: rgba(56, 189, 248, 0.28);
+}
+
+[data-theme="light"] {
+  --f1-default: #3F3F46;
+  --f1-map-bg: #101218;
+  --f1-map-grid-line: rgba(255, 255, 255, 0.065);
+  --f1-map-equator: rgba(245, 230, 66, 0.22);
+  --f1-map-land: rgba(228, 228, 231, 0.12);
+  --f1-map-land-stroke: rgba(228, 228, 231, 0.34);
+  --f1-map-route: rgba(56, 189, 248, 0.34);
+}
+
+.f1-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.f1-season-select {
+  min-height: 44px;
+  min-width: 148px;
+  padding: 0 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.f1-season-select:focus {
+  outline: none;
+  border-color: var(--cyber-yellow);
+}
+
+.f1-sync-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.f1-sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--status-success);
+  box-shadow: 0 0 8px var(--status-success);
+  flex-shrink: 0;
+}
+
+.f1-sync-dot.is-stale {
+  background-color: var(--status-warning);
+  box-shadow: 0 0 8px var(--status-warning);
+}
+
+/* KPIs con acento cyberpunk */
+.f1-kpi-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--hud-border);
+}
+
+.f1-kpi-card.is-cyber-highlight {
+  border-color: var(--cyber-yellow-border);
+  background: linear-gradient(160deg, var(--hud-kpi-bg) 70%, rgba(245, 230, 66, 0.08) 100%);
+}
+
+.f1-kpi-card.is-cyber-highlight .kpi-top svg {
+  color: var(--cyber-yellow);
+}
+
+/* Tabs principales de F1 */
+.f1-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 18px;
+  scrollbar-width: none;
+}
+
+.f1-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.f1-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.f1-tab-btn:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--cyber-yellow-border);
+}
+
+.f1-tab-btn.active {
+  background-color: var(--cyber-yellow);
+  color: #07070A;
+  border-color: var(--cyber-yellow);
+  font-weight: 600;
+  box-shadow: 0 0 14px rgba(245, 230, 66, 0.22);
+}
+
+.f1-tab-btn.active svg {
+  stroke: #07070A;
+}
+
+.f1-tab-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* Sub-tabs (ej. Carrera / Clasificación) */
+.f1-subtabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.f1-subtab-btn {
+  min-height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.f1-subtab-btn.active {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--cyber-yellow-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Datos monoespaciados tabulares */
+.f1-mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.f1-countdown {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.22rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cyber-yellow);
+  text-shadow: 0 0 10px rgba(245, 230, 66, 0.25);
+}
+
+[data-theme="light"] .f1-kpi-card.is-cyber-highlight .f1-countdown {
+  color: var(--text-primary);
+  text-shadow: none;
+}
+
+/* ==========================================
+   Mapa Mundi Cyberpunk Interactivo
+   ========================================== */
+.f1-map-card {
+  margin-bottom: 16px;
+}
+
+.f1-map-wrap {
+  position: relative;
+  border-radius: var(--radius-md);
+  background-color: var(--f1-map-bg);
+  border: 1px solid var(--cyber-hud-frame-border);
+  overflow: hidden;
+  padding: 10px 10px 8px;
+}
+
+.f1-map-hud-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.f1-map-coords {
+  font-size: 0.72rem;
+  color: var(--cyber-yellow);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.f1-world-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 440px;
+}
+
+.f1-map-continents path {
+  fill: rgba(56, 189, 248, 0.08);
+  stroke: rgba(56, 189, 248, 0.34);
+  stroke-width: 0.75;
+  stroke-linejoin: round;
+}
+
+.f1-map-route {
+  stroke: var(--f1-map-route);
+  stroke-width: 1.15;
+  stroke-dasharray: 3 4;
+}
+
+.f1-map-pin {
+  cursor: pointer;
+  outline: none;
+}
+
+.f1-map-pin.is-past .f1-pin-dot {
+  fill: var(--status-info);
+  stroke: #07070A;
+  stroke-width: 1.2;
+}
+
+.f1-map-pin.is-future .f1-pin-dot {
+  fill: transparent;
+  stroke: #A1A1AA;
+  stroke-width: 1.6;
+}
+
+.f1-map-pin.is-next .f1-pin-dot {
+  fill: var(--cyber-yellow);
+  stroke: #07070A;
+  stroke-width: 1.5;
+}
+
+.f1-pin-pulse-outer {
+  fill: none;
+  stroke: var(--cyber-yellow);
+  stroke-width: 1.4;
+  opacity: 0.85;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: f1RadarPulse 1.8s ease-out infinite;
+}
+
+.f1-pin-pulse-inner {
+  fill: rgba(245, 230, 66, 0.24);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: f1RadarBlink 1.2s ease-in-out infinite;
+}
+
+.f1-pin-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--cyber-yellow);
+  paint-order: stroke;
+  stroke: #07070A;
+  stroke-width: 3px;
+}
+
+.f1-map-pin:hover .f1-pin-dot,
+.f1-map-pin:focus .f1-pin-dot {
+  r: 6.2;
+}
+
+@keyframes f1RadarPulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
+
+@keyframes f1RadarBlink {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.75; }
+}
+
+.f1-map-tooltip {
+  position: absolute;
+  z-index: 12;
+  min-width: 195px;
+  max-width: 240px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background-color: rgba(11, 11, 16, 0.94);
+  border: 1px solid var(--cyber-yellow-border);
+  box-shadow: var(--shadow-md);
+  color: #F4F4F5;
+  pointer-events: none;
+}
+
+.f1-tip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: #A1A1AA;
+  margin-bottom: 4px;
+}
+
+.f1-tip-status {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.64rem;
+  font-weight: 600;
+}
+
+.f1-tip-status.is-next {
+  background-color: var(--cyber-yellow);
+  color: #07070A;
+}
+
+.f1-tip-status.is-past {
+  background-color: rgba(56, 189, 248, 0.2);
+  color: #38BDF8;
+}
+
+.f1-tip-status.is-future {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #D4D4D8;
+}
+
+.f1-tip-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.f1-tip-sub {
+  font-size: 0.72rem;
+  color: #A1A1AA;
+  margin-top: 2px;
+}
+
+.f1-map-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 4px 4px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.f1-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: #A1A1AA;
+}
+
+.f1-legend-item i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.f1-legend-item i.is-past { background-color: var(--status-info); }
+.f1-legend-item i.is-next {
+  background-color: var(--cyber-yellow);
+  box-shadow: 0 0 8px var(--cyber-yellow);
+}
+.f1-legend-item i.is-future {
+  border: 1.5px solid #A1A1AA;
+}
+
+/* ==========================================
+   Horarios, Podio y Acentos de Escudería
+   ========================================== */
+.f1-sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.f1-session-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.f1-session-item.is-main {
+  border-color: var(--cyber-yellow-border);
+  background: linear-gradient(135deg, var(--bg-surface-elevated), rgba(245, 230, 66, 0.07));
+}
+
+.f1-session-name {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.f1-session-time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+  color: var(--text-primary);
+}
+
+/* Podio destacado con color de escudería */
+.f1-podium-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.f1-podium-card {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--f1-team-color, var(--accent-primary));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.f1-podium-card.is-p1 {
+  border-top-color: var(--cyber-yellow-border);
+  border-right-color: var(--cyber-yellow-border);
+  border-bottom-color: var(--cyber-yellow-border);
+  background: linear-gradient(145deg, var(--bg-surface-elevated), rgba(245, 230, 66, 0.06));
+}
+
+.f1-podium-pos {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+
+.f1-podium-driver {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.f1-podium-team {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.f1-team-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background-color: var(--f1-team-color, var(--accent-primary));
+  flex-shrink: 0;
+}
+
+.f1-podium-time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+/* Tablas responsivas */
+.f1-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.f1-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.f1-table th {
+  text-align: left;
+  padding: 10px 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+
+.f1-table td {
+  padding: 11px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.f1-table tbody tr:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.f1-table th.num,
+.f1-table td.num {
+  text-align: right;
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.f1-pos-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.f1-pos-pill.is-p1 {
+  background-color: var(--cyber-yellow);
+  color: #07070A;
+  border-color: var(--cyber-yellow);
+}
+
+.f1-driver-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 8px;
+  border-left: 3px solid var(--f1-team-color, var(--border-strong));
+}
+
+.f1-driver-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.f1-driver-sub {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.f1-delta-up { color: var(--status-success); }
+.f1-delta-down { color: var(--status-danger); }
+.f1-delta-flat { color: var(--text-muted); }
+
+.f1-fl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background-color: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(192, 132, 252, 0.5);
+  color: #D8B4FE;
+}
+
+[data-theme="light"] .f1-fl-badge {
+  color: #6B21A8;
+  background-color: rgba(147, 51, 234, 0.10);
+  border-color: rgba(147, 51, 234, 0.45);
+}
+
+/* Barra de progreso de puntos en campeonatos */
+.f1-pts-bar-wrap {
+  width: 100%;
+  min-width: 80px;
+  height: 5px;
+  border-radius: 999px;
+  background-color: var(--bg-surface-elevated);
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.f1-pts-bar {
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--f1-team-color, var(--accent-primary));
+}
+
+/* Calendario de Grandes Premios (lista principal) */
+.f1-calendar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.f1-race-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.f1-race-row.is-next {
+  border-color: var(--cyber-yellow-border);
+  background: linear-gradient(90deg, rgba(245, 230, 66, 0.08), var(--bg-surface-elevated) 55%);
+}
+
+.f1-race-row-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.f1-round-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.f1-race-row.is-next .f1-round-badge {
+  border-color: var(--cyber-yellow);
+}
+
+.f1-round-badge span:first-child {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.f1-round-badge span:last-child {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.f1-race-info {
+  min-width: 0;
+}
+
+.f1-race-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.94rem;
+}
+
+.f1-race-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.f1-race-row-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   Calendario Lateral F1 (con banderas)
+   ========================================== */
+.hcal-day.f1-has-race {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-weight: 600;
+  border: 1px solid var(--border-default);
+}
+
+.hcal-day.f1-has-race.f1-race-past {
+  background-color: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--text-primary);
+}
+
+.hcal-day.f1-has-race.f1-race-next {
+  background-color: var(--cyber-yellow);
+  border-color: var(--cyber-yellow);
+  color: #07070A;
+  box-shadow: 0 0 10px rgba(245, 230, 66, 0.35);
+}
+
+.hcal-day.f1-has-race.f1-race-future {
+  background-color: var(--accent-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.hcal-day.f1-has-race.is-selected {
+  outline: 2px solid var(--cyber-yellow);
+  outline-offset: 1px;
+}
+
+.f1-cal-flag-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.f1-cal-flag-icon svg {
+  width: 9px;
+  height: 9px;
+}
+
+.f1-aside-summary-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.f1-aside-race-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.f1-aside-podium-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.f1-aside-podium-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface-elevated);
+  border-left: 3px solid var(--f1-team-color, var(--accent-primary));
+  font-size: 0.76rem;
+}
+
+/* OpenF1: Clima, Stints y Race Control */
+.f1-weather-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.f1-weather-box {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.f1-weather-label {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.f1-weather-val {
+  margin-top: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.f1-stints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.f1-stint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.f1-stint-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.f1-tyre-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  font-weight: 500;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.f1-tyre-pill.is-soft { border-color: var(--status-danger); color: var(--status-danger); }
+.f1-tyre-pill.is-medium { border-color: var(--cyber-yellow); color: var(--cyber-yellow); }
+.f1-tyre-pill.is-hard { border-color: var(--border-strong); }
+.f1-tyre-pill.is-inter { border-color: var(--status-success); color: var(--status-success); }
+.f1-tyre-pill.is-wet { border-color: var(--status-info); color: var(--status-info); }
+
+[data-theme="light"] .f1-tyre-pill.is-medium {
+  color: #A16207;
+  border-color: #CA8A04;
+}
+
+.f1-rc-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.f1-rc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.82rem;
+}
+
+.f1-rc-time {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.f1-rc-msg {
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+/* Estados de carga y error */
+.f1-loading-box,
+.f1-error-box {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.f1-loading-spinner {
+  width: 24px;
+  height: 24px;
+  margin: 0 auto 12px;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--cyber-yellow);
+  border-radius: 50%;
+  animation: f1Spin 0.8s linear infinite;
+}
+
+@keyframes f1Spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   Panel Superior: Selector Mapa / Pilotos / Escuderías
+   ========================================== */
+.f1-hero-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.f1-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.f1-hero-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--cyber-yellow-border);
+  background-color: var(--bg-surface-hover);
+}
+
+.f1-hero-btn.active {
+  background-color: var(--cyber-yellow);
+  color: #07070A;
+  border-color: var(--cyber-yellow);
+  font-weight: 600;
+}
+
+.f1-hero-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Grilla futurista de Pilotos y Escuderías */
+.f1-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.f1-entity-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(155deg, var(--bg-surface-elevated) 65%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--f1-team-color, var(--accent-primary));
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.14s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.f1-entity-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--f1-team-color, var(--cyber-yellow-border));
+  box-shadow: var(--shadow-md);
+}
+
+.f1-entity-watermark {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+  font-family: 'Chakra Petch', 'IBM Plex Mono', sans-serif;
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.f1-entity-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.f1-avatar-box {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--f1-team-color, var(--border-default));
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.f1-avatar-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.f1-avatar-fallback {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--f1-team-color, var(--text-primary));
+}
+
+.f1-team-logo-box {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--f1-team-color, var(--border-default));
+  color: var(--f1-team-color, var(--text-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.f1-team-logo-box svg {
+  width: 28px;
+  height: 28px;
+}
+
+.f1-entity-meta {
+  min-width: 0;
+}
+
+.f1-entity-pos {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.f1-entity-name {
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.f1-entity-sub {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.f1-entity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.f1-stat-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.f1-stat-mini span:first-child {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.f1-stat-mini strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.86rem;
+  color: var(--text-primary);
+}
+
+/* Vista de Perfil Detallado (Piloto o Escudería) */
+.f1-profile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.f1-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--bg-surface-elevated) 55%, rgba(245, 230, 66, 0.05) 100%);
+  border: 1px solid var(--border-default);
+  border-left: 5px solid var(--f1-team-color, var(--cyber-yellow));
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.f1-profile-portrait {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 2px solid var(--f1-team-color, var(--cyber-yellow));
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.f1-profile-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.f1-profile-portrait svg {
+  width: 48px;
+  height: 48px;
+  color: var(--f1-team-color, var(--text-primary));
+}
+
+.f1-profile-info {
+  flex: 1;
+  min-width: 210px;
+}
+
+.f1-profile-title {
+  font-size: 1.32rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 2px 0 4px;
+}
+
+.f1-profile-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.f1-profile-kpi {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.f1-profile-kpi span {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.f1-profile-kpi strong {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+/* ==========================================
+   Dashboard: Grid 3/4 Decálogo + 1/4 Resumen F1
+   ========================================== */
+.dash-decalogue-f1-grid {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+.dash-f1-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dash-f1-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.dash-f1-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dash-f1-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dash-f1-top3 {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-f1-driver-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface-elevated);
+  border-left: 3px solid var(--f1-team-color, var(--accent-primary));
+  font-size: 0.78rem;
+}
+
+.dash-f1-driver-row.is-p1 {
+  border-left-width: 3px;
+  background: linear-gradient(90deg, rgba(245, 230, 66, 0.08), var(--bg-surface-elevated) 70%);
+}
+
+.dash-f1-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface-elevated);
+  border-left: 3px solid var(--f1-team-color, var(--accent-primary));
+  font-size: 0.78rem;
+}
+
+.dash-f1-team-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+}
+
+.dash-f1-team-name svg {
+  width: 15px;
+  height: 15px;
+  color: var(--f1-team-color, var(--text-primary));
+  flex-shrink: 0;
+}
+
+.dash-f1-race-mini {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.dash-f1-race-mini strong {
+  display: block;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-f1-race-mini span {
+  color: var(--text-secondary);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 1080px) {
+  .dash-decalogue-f1-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .f1-season-select {
+    font-size: 16px;
+  }
+
+  .f1-podium-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .f1-race-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .f1-race-row-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

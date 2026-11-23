@@ -5,6 +5,8 @@ import { renderMementoSidebar } from '../components/memento.js?v=1.6.0';
 import { escapeHTML, stripHTML, formatDateDMY } from '../utils/text.js?v=4.3.0';
 import { isScheduled, isDone, normalizeHabit } from '../utils/habits.js?v=3.3.0';
 import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
+import { fetchSeasonOverview, parseRaceDateTime, resolveRaceTimeline } from '../services/f1.js?v=1.1.0';
+import { getTeamMeta } from '../components/f1Teams.js?v=1.0.0';
 
 const DECALOGUE = [
   'Habla con una voz profunda y lenta',
@@ -241,22 +243,35 @@ export function renderDashboard(container) {
       </div>
     </section>
 
-    <!-- Decálogo Personal -->
-    <section class="card cyber-frame-wrap" style="margin-bottom:16px;">
-      ${hudFrameOrnaments()}
-      <div class="card-header">
-        <h2 class="card-title">${icon('shield')} Decálogo Personal</h2>
-        <span class="cyber-tag">CODE.10</span>
-      </div>
-      <ol class="decalogue-grid">
-        ${DECALOGUE.map((rule, idx) => `
-          <li class="decalogue-item">
-            <span class="decalogue-num mono">${String(idx + 1).padStart(2, '0')}</span>
-            <span class="decalogue-text">${escapeHTML(rule)}</span>
-          </li>
-        `).join('')}
-      </ol>
-    </section>
+    <!-- Resumen F1 (1/4) + Decálogo Personal (3/4) -->
+    <div class="dash-decalogue-f1-grid">
+      <section class="card cyber-frame-wrap dash-f1-card" id="dash-f1-card">
+        ${hudFrameOrnaments()}
+        <div class="card-header">
+          <h2 class="card-title">${icon('flag')} Fórmula 1</h2>
+          <a href="#/f1" class="btn btn-ghost btn-sm">Ver F1 →</a>
+        </div>
+        <div class="dash-f1-body" id="dash-f1-body">
+          <div class="empty-state" style="padding:18px 8px;">Sincronizando F1...</div>
+        </div>
+      </section>
+
+      <section class="card cyber-frame-wrap">
+        ${hudFrameOrnaments()}
+        <div class="card-header">
+          <h2 class="card-title">${icon('shield')} Decálogo Personal</h2>
+          <span class="cyber-tag">CODE.10</span>
+        </div>
+        <ol class="decalogue-grid">
+          ${DECALOGUE.map((rule, idx) => `
+            <li class="decalogue-item">
+              <span class="decalogue-num mono">${String(idx + 1).padStart(2, '0')}</span>
+              <span class="decalogue-text">${escapeHTML(rule)}</span>
+            </li>
+          `).join('')}
+        </ol>
+      </section>
+    </div>
 
     <!-- Check-in rápido de hábitos a todo el ancho -->
     <section class="card" style="margin-bottom:16px;">
@@ -349,4 +364,83 @@ export function renderDashboard(container) {
   if (clockInterval) clearInterval(clockInterval);
   updateClockBar();
   clockInterval = setInterval(updateClockBar, 1000);
+
+  hydrateDashboardF1Card(container);
+}
+
+async function hydrateDashboardF1Card(container) {
+  const body = container.querySelector('#dash-f1-body');
+  if (!body) return;
+
+  try {
+    const data = await fetchSeasonOverview('current', false);
+    if (!document.body.contains(body)) return;
+
+    const top3 = (data.driverStandings || []).slice(0, 3);
+    const leaderTeam = data.constructorStandings?.[0] || null;
+    const lastRace = data.lastRace || null;
+    const lastWinner = lastRace?.Results?.[0] || null;
+    const { nextRace } = resolveRaceTimeline(data.races || []);
+
+    const nextDate = nextRace ? parseRaceDateTime(nextRace.date, nextRace.time) : null;
+    const nextLabel = nextDate
+      ? new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(nextDate)
+      : '—';
+
+    const leaderTeamMeta = leaderTeam ? getTeamMeta(leaderTeam.Constructor) : null;
+
+    body.innerHTML = `
+      <div class="dash-f1-block">
+        <span class="dash-f1-label">Top 3 Mundial · ${escapeHTML(data.season)}</span>
+        ${top3.length ? `
+          <div class="dash-f1-top3">
+            ${top3.map(d => {
+              const tm = getTeamMeta(d.Constructors?.[0]);
+              return `
+                <div class="dash-f1-driver-row ${d.position === '1' ? 'is-p1' : ''}" style="--f1-team-color:${tm.colorVar}">
+                  <span><strong>P${escapeHTML(d.position)}</strong> ${escapeHTML(d.Driver.code || d.Driver.familyName)}</span>
+                  <span class="f1-mono">${escapeHTML(d.points)} pts</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : `<div class="dash-f1-race-mini"><span>Sin clasificación aún</span></div>`}
+      </div>
+
+      ${leaderTeam ? `
+        <div class="dash-f1-block">
+          <span class="dash-f1-label">Escudería Líder</span>
+          <div class="dash-f1-team-row" style="--f1-team-color:${leaderTeamMeta.colorVar}">
+            <span class="dash-f1-team-name">
+              ${leaderTeamMeta.svg}
+              <span>${escapeHTML(leaderTeam.Constructor.name)}</span>
+            </span>
+            <span class="f1-mono">${escapeHTML(leaderTeam.points)} pts</span>
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="dash-f1-block">
+        <span class="dash-f1-label">Última Carrera</span>
+        <div class="dash-f1-race-mini">
+          ${lastRace
+            ? `<strong>${escapeHTML(lastRace.raceName)}</strong><span>${lastWinner ? `P1: ${escapeHTML(lastWinner.Driver.code || lastWinner.Driver.familyName)}` : 'Sin ganador'}</span>`
+            : `<strong>Sin carreras</strong><span>Temporada por iniciar</span>`}
+        </div>
+      </div>
+
+      <div class="dash-f1-block">
+        <span class="dash-f1-label">Próxima Carrera</span>
+        <div class="dash-f1-race-mini">
+          ${nextRace
+            ? `<strong>R${escapeHTML(nextRace.round)} · ${escapeHTML(nextRace.raceName)}</strong><span>${escapeHTML(nextLabel)}</span>`
+            : `<strong>Temporada cerrada</strong><span>${escapeHTML(String((data.races || []).length))} rondas</span>`}
+        </div>
+      </div>
+    `;
+  } catch {
+    if (document.body.contains(body)) {
+      body.innerHTML = `<div class="empty-state" style="padding:14px 8px;">No se pudo cargar F1. <a href="#/f1" style="text-decoration:underline;">Abrir sección</a></div>`;
+    }
+  }
 }

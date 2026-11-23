@@ -1,4 +1,4 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.9.2';
+import { initRouter, getActiveRoute } from './router.js?v=6.9.3';
 import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.9.0';
 import {
   handleGoogleRedirectResult,
@@ -7,7 +7,7 @@ import {
   loginWithGoogle,
   isValidPin
 } from './services/auth.js?v=6.9.0';
-import { icon } from './components/icons.js?v=3.3.0';
+import { icon } from './components/icons.js?v=3.4.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=6.9.0';
 import { initGlobalSearch } from './components/search.js?v=1.3.1';
 import { hudFrameOrnaments } from './components/hudFrame.js?v=1.0.0';
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { path: '/reading', label: 'Lectura', shortLabel: 'Lectura', icon: 'reading' },
   { path: '/journal', label: 'Diario', shortLabel: 'Diario', icon: 'journal' },
   { path: '/finance', label: 'Finanzas', shortLabel: 'Finanzas', icon: 'finance' },
+  { path: '/f1', label: 'Fórmula 1', shortLabel: 'F1', icon: 'flag' },
   { path: '/settings', label: 'Ajustes', shortLabel: 'Ajustes', icon: 'settings' }
 ];
 

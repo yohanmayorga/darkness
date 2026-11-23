@@ -1,10 +1,11 @@
-import { renderDashboard } from './modules/dashboard.js?v=6.9.1';
+import { renderDashboard } from './modules/dashboard.js?v=6.9.3';
 import { renderHabits } from './modules/habits.js?v=6.9.4';
 import { renderTasks } from './modules/tasks.js?v=6.9.0';
 import { renderBody } from './modules/body.js?v=6.9.4';
 import { renderReading } from './modules/reading.js?v=6.9.0';
 import { renderJournal } from './modules/journal.js?v=6.9.0';
 import { renderFinance } from './modules/finance.js?v=6.9.2';
+import { renderF1 } from './modules/f1.js?v=1.3.0';
 import { renderSettings } from './modules/settings.js?v=6.9.0';
 
 const ROUTES = {
@@ -15,6 +16,7 @@ const ROUTES = {
   '/reading': renderReading,
   '/journal': renderJournal,
   '/finance': renderFinance,
+  '/f1': renderF1,
   '/settings': renderSettings
 };
 

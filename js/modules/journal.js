@@ -790,8 +790,9 @@ function renderEditor(container, existing = null, presetDate = '') {
 
   const stopActivePlayback = () => {
     if (activeAudio) {
+      activeAudio._disposed = true;
       activeAudio.pause();
-      activeAudio.src = '';
+      activeAudio.removeAttribute('src');
       activeAudio = null;
     }
     if (activeAudioUrl) {
@@ -932,6 +933,7 @@ function renderEditor(container, existing = null, presetDate = '') {
           });
 
           audio.addEventListener('error', () => {
+            if (audio._disposed) return;
             stopActivePlayback();
             btn.innerHTML = icon('play');
             row?.classList.remove('is-playing');

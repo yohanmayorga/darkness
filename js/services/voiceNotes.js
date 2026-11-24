@@ -43,11 +43,17 @@ export async function uploadVoiceNoteToCloud(note, blob) {
 }
 
 /**
- * Descarga el audio directamente desde Firebase Storage en el momento de escucharlo.
- * No guarda copias en IndexedDB ni en almacenamiento local.
+ * Obtiene la URL de streaming directa desde Firebase Storage en el momento de escucharlo.
+ * Usa getDownloadURL para evitar bloqueos CORS de fetch/getBlob y sin guardar nada en caché local.
  */
-export async function fetchVoiceNoteBlobUrl(note) {
-  if (!note?.id || !note?.storagePath) {
+export async function getVoiceNoteStreamUrl(note) {
+  if (!note?.id) {
+    throw new Error('Nota de voz inválida.');
+  }
+  if (note.uploading) {
+    throw new Error('El audio se está subiendo a la nube, espera un momento.');
+  }
+  if (!note.storagePath) {
     throw new Error('Audio no disponible en la nube.');
   }
 
@@ -62,8 +68,7 @@ export async function fetchVoiceNoteBlobUrl(note) {
   }
 
   const ref = fb.storageMod.ref(fb.storage, note.storagePath);
-  const blob = await fb.storageMod.getBlob(ref);
-  return URL.createObjectURL(blob);
+  return fb.storageMod.getDownloadURL(ref);
 }
 
 /**

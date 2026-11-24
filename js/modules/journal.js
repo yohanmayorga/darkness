@@ -1,14 +1,14 @@
 import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=6.9.1';
 import {
   uploadVoiceNoteToCloud,
-  fetchVoiceNoteBlobUrl,
+  getVoiceNoteStreamUrl,
   deleteVoiceNoteFiles,
   purgeLegacyVoiceCache,
   pickSupportedAudioMime,
   formatDuration,
   formatBytes,
   getVoiceStorageStats
-} from '../services/voiceNotes.js?v=1.1.0';
+} from '../services/voiceNotes.js?v=1.2.0';
 import { icon } from '../components/icons.js?v=1.5.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML } from '../components/calendar.js?v=2.6.0';
@@ -900,10 +900,11 @@ function renderEditor(container, existing = null, presetDate = '') {
         });
 
         btn.disabled = true;
+        btn.classList.add('is-loading');
         try {
-          const src = await fetchVoiceNoteBlobUrl(vn);
-          activeAudioUrl = src;
+          const src = await getVoiceNoteStreamUrl(vn);
           const audio = new Audio(src);
+          audio.preload = 'auto';
           activeAudio = audio;
           activePlayingId = vn.id;
 
@@ -930,6 +931,13 @@ function renderEditor(container, existing = null, presetDate = '') {
             if (timeEl) timeEl.textContent = `00:00 / ${formatDuration(vn.duration || 0)}`;
           });
 
+          audio.addEventListener('error', () => {
+            stopActivePlayback();
+            btn.innerHTML = icon('play');
+            row?.classList.remove('is-playing');
+            showToast('Error al reproducir el audio desde Firebase Storage');
+          });
+
           if (seekEl) {
             seekEl.oninput = () => {
               if (activeAudio === audio) audio.currentTime = Number(seekEl.value) || 0;
@@ -940,10 +948,12 @@ function renderEditor(container, existing = null, presetDate = '') {
           btn.innerHTML = icon('pause');
           row?.classList.add('is-playing');
         } catch (err) {
+          console.error('Error reproduciendo nota de voz:', err);
           stopActivePlayback();
-          showToast(err?.message || 'No se pudo descargar el audio');
+          showToast(err?.message || 'No se pudo reproducir el audio');
         } finally {
           btn.disabled = false;
+          btn.classList.remove('is-loading');
         }
       });
     });

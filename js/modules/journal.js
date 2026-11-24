@@ -4,13 +4,14 @@ import {
   getVoiceNoteStreamUrl,
   deleteVoiceNoteFiles,
   purgeLegacyVoiceCache,
-  pickSupportedAudioMime,
+  startVoiceRecording,
   formatDuration,
   formatBytes,
   getVoiceStorageStats
-} from '../services/voiceNotes.js?v=1.2.0';
+} from '../services/voiceNotes.js?v=1.3.0';
 import { icon } from '../components/icons.js?v=1.5.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
+import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { buildUnifiedCalendarHTML } from '../components/calendar.js?v=2.6.0';
 import {
   escapeHTML,
@@ -37,6 +38,15 @@ const state = { query: '', selectedDate: '', calYear: null, calMonth: null };
    ========================================================================== */
 const pad = n => String(n).padStart(2, '0');
 const toISO = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+const PLAYBACK_SPEEDS = [1, 1.25, 1.5, 2];
+
+function paintSpectrumBars(bars, data) {
+  bars.forEach((bar, idx) => {
+    const val = data[idx % data.length] || 0;
+    const pct = Math.max(14, Math.min(100, Math.round((val / 255) * 100)));
+    bar.style.height = `${pct}%`;
+  });
+}
 
 function parseISO(iso) {
   const [y, m, d] = String(iso || '').split('-').map(Number);
@@ -230,6 +240,7 @@ function renderList(container) {
         <p class="page-subtitle">Tu espacio privado de escritura, reflexión y memoria.</p>
       </div>
       <div class="page-actions">
+        <button type="button" class="btn-voice-rec btn-voice-quick" id="btn-quick-voice">${icon('mic')} <span>Nuevo audio</span></button>
         <a href="#/journal/new" class="btn btn-primary">${icon('plus')} Nueva Entrada</a>
       </div>
     </header>
@@ -436,6 +447,140 @@ function renderList(container) {
   renderResults();
   renderCalendar();
   purgeLegacyVoiceCache();
+
+  container.querySelector('#btn-quick-voice')?.addEventListener('click', () => {
+    openQuickVoiceModal(container);
+  });
+}
+
+function openQuickVoiceModal(listContainer) {
+  let recSession = null;
+  let saving = false;
+
+  openModal({
+    title: 'AUDIO_REC // NUEVO AUDIO RÁPIDO',
+    contentHTML: `
+      <div class="qvoice-modal">
+        <div class="form-group">
+          <label class="form-label" for="qvoice-title">Nombre de la entrada (opcional)</label>
+          <input type="text" id="qvoice-title" class="form-input" placeholder="Ej. Idea nocturna, reflexión rápida..." maxlength="140" />
+        </div>
+
+        <div class="vdeck-live qvoice-live" id="qvoice-live">
+          <div class="vdeck-rec-badge mono">
+            <span class="vdeck-rec-dot"></span>
+            <span>REC</span>
+            <span id="qvoice-timer">00:00</span>
+          </div>
+          <div class="vdeck-spectrum" id="qvoice-spectrum" aria-hidden="true">
+            ${'<span></span>'.repeat(20)}
+          </div>
+        </div>
+
+        <p class="qvoice-hint mono" id="qvoice-status">Iniciando micrófono…</p>
+
+        <div class="qvoice-actions">
+          <button type="button" class="btn btn-ghost btn-sm" id="qvoice-cancel">${icon('close')} Cancelar</button>
+          <button type="button" class="btn-voice-stop" id="qvoice-save" disabled>${icon('stop')} <span>DETENER Y GUARDAR</span></button>
+        </div>
+      </div>
+    `,
+    onMount: async (backdrop) => {
+      const titleInput = backdrop.querySelector('#qvoice-title');
+      const timerEl = backdrop.querySelector('#qvoice-timer');
+      const bars = [...backdrop.querySelectorAll('#qvoice-spectrum span')];
+      const statusEl = backdrop.querySelector('#qvoice-status');
+      const saveBtn = backdrop.querySelector('#qvoice-save');
+      const cancelBtn = backdrop.querySelector('#qvoice-cancel');
+
+      const cancelAndClose = () => {
+        if (saving) return;
+        recSession?.cancel();
+        recSession = null;
+        closeModal();
+      };
+
+      // Si cierran el modal desde la X o haciendo clic fuera
+      backdrop.querySelector('#modal-close-btn')?.addEventListener('click', () => recSession?.cancel(), { once: true });
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) recSession?.cancel();
+      }, { once: true });
+      cancelBtn.addEventListener('click', cancelAndClose);
+
+      recSession = await startVoiceRecording({
+        onTick: (secs) => {
+          if (timerEl) timerEl.textContent = formatDuration(secs);
+        },
+        onLevels: (data) => paintSpectrumBars(bars, data),
+        onError: (msg) => {
+          showToast(msg);
+          closeModal();
+        },
+        onComplete: async (result) => {
+          if (!result || !saving) return;
+          const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+          const customTitle = titleInput.value.trim();
+          const entryTitle = customTitle || `Nota de voz · ${timeLabel}`;
+          const note = {
+            id: generateId('vn'),
+            title: customTitle || `REC ${timeLabel}`,
+            duration: result.duration,
+            size: result.blob.size,
+            mimeType: result.mimeType,
+            createdAt: new Date().toISOString(),
+            storagePath: '',
+            synced: false
+          };
+
+          statusEl.textContent = 'Subiendo audio a Firebase Storage…';
+          const cloud = await uploadVoiceNoteToCloud(note, result.blob);
+          if (!cloud.ok) {
+            saving = false;
+            showToast('No se pudo subir a la nube. Verifica tu sesión o conexión.');
+            closeModal();
+            return;
+          }
+
+          note.storagePath = cloud.storagePath;
+          note.synced = true;
+
+          const now = new Date().toISOString();
+          const store = getStore();
+          if (!Array.isArray(store.journalEntries)) store.journalEntries = [];
+          store.journalEntries.unshift({
+            id: generateId('jr'),
+            date: todayISO(),
+            title: entryTitle,
+            content: '',
+            tags: [],
+            attachments: [],
+            voiceNotes: [note],
+            createdAt: now,
+            updatedAt: now
+          });
+          saveStore(store);
+
+          saving = false;
+          closeModal();
+          showToast('Nota de voz guardada en el Diario');
+          if (document.body.contains(listContainer)) renderList(listContainer);
+        }
+      });
+
+      if (recSession && document.body.contains(backdrop)) {
+        statusEl.textContent = 'Grabando… Ponle un nombre si quieres y pulsa Detener cuando termines.';
+        saveBtn.disabled = false;
+        saveBtn.addEventListener('click', () => {
+          if (saving || !recSession) return;
+          saving = true;
+          saveBtn.disabled = true;
+          cancelBtn.disabled = true;
+          saveBtn.innerHTML = `${icon('cloud')} <span>SUBIENDO…</span>`;
+          recSession.stop();
+        });
+      }
+    }
+  });
 }
 
 /* ==========================================================================
@@ -753,34 +898,12 @@ function renderEditor(container, existing = null, presetDate = '') {
   const vTimerEl = container.querySelector('#vdeck-timer');
   const vSpectrumBars = [...container.querySelectorAll('#vdeck-spectrum span')];
 
-  let mediaRecorder = null;
-  let recStream = null;
-  let recChunks = [];
-  let recStartMs = 0;
-  let recTimerId = null;
-  let recCancelled = false;
-  let audioCtx = null;
-  let analyser = null;
-  let rafId = null;
-
+  let recSession = null;
   let activeAudio = null;
-  let activeAudioUrl = '';
   let activePlayingId = null;
+  let playbackRate = 1;
 
-  const stopRecordingResources = () => {
-    clearInterval(recTimerId);
-    recTimerId = null;
-    cancelAnimationFrame(rafId);
-    rafId = null;
-    if (recStream) {
-      recStream.getTracks().forEach(t => t.stop());
-      recStream = null;
-    }
-    if (audioCtx) {
-      audioCtx.close().catch(() => {});
-      audioCtx = null;
-      analyser = null;
-    }
+  const resetRecUI = () => {
     vSpectrumBars.forEach(b => { b.style.height = '18%'; });
     vRecBtn.hidden = false;
     vStopBtn.hidden = true;
@@ -794,10 +917,6 @@ function renderEditor(container, existing = null, presetDate = '') {
       activeAudio.pause();
       activeAudio.removeAttribute('src');
       activeAudio = null;
-    }
-    if (activeAudioUrl) {
-      URL.revokeObjectURL(activeAudioUrl);
-      activeAudioUrl = '';
     }
     activePlayingId = null;
   };
@@ -836,6 +955,7 @@ function renderEditor(container, existing = null, presetDate = '') {
             </div>
             <div class="vnote-progress-row">
               <input type="range" class="vnote-seek" data-vn-seek="${i}" min="0" max="${Math.max(1, Math.round(vn.duration || 1))}" value="0" step="0.1" aria-label="Progreso de audio" />
+              <button type="button" class="vnote-speed-btn mono" data-vn-speed="${i}" title="Cambiar velocidad de reproducción">${playbackRate}x</button>
               <span class="vnote-time mono" data-vn-time="${i}">00:00 / ${formatDuration(vn.duration || 0)}</span>
             </div>
           </div>
@@ -868,6 +988,18 @@ function renderEditor(container, existing = null, presetDate = '') {
         onChange();
         await deleteVoiceNoteFiles(target);
         showToast('Nota de voz eliminada');
+      });
+    });
+
+    vListEl.querySelectorAll('[data-vn-speed]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextIdx = (PLAYBACK_SPEEDS.indexOf(playbackRate) + 1) % PLAYBACK_SPEEDS.length;
+        playbackRate = PLAYBACK_SPEEDS[nextIdx];
+        vListEl.querySelectorAll('[data-vn-speed]').forEach(b => {
+          b.textContent = `${playbackRate}x`;
+          b.classList.toggle('is-fast', playbackRate > 1);
+        });
+        if (activeAudio) activeAudio.playbackRate = playbackRate;
       });
     });
 
@@ -906,6 +1038,7 @@ function renderEditor(container, existing = null, presetDate = '') {
           const src = await getVoiceNoteStreamUrl(vn);
           const audio = new Audio(src);
           audio.preload = 'auto';
+          audio.playbackRate = playbackRate;
           activeAudio = audio;
           activePlayingId = vn.id;
 
@@ -962,124 +1095,66 @@ function renderEditor(container, existing = null, presetDate = '') {
   };
 
   vRecBtn.addEventListener('click', async () => {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      showToast('Tu navegador no soporta grabación de audio');
-      return;
-    }
-
-    try {
-      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      showToast('Permiso de micrófono denegado');
-      return;
-    }
-
-    const mimeType = pickSupportedAudioMime();
-    try {
-      mediaRecorder = mimeType
-        ? new MediaRecorder(recStream, { mimeType, audioBitsPerSecond: 48000 })
-        : new MediaRecorder(recStream);
-    } catch {
-      mediaRecorder = new MediaRecorder(recStream);
-    }
-
-    recChunks = [];
-    recCancelled = false;
-    recStartMs = Date.now();
     vTimerEl.textContent = '00:00';
     vRecBtn.hidden = true;
     vStopBtn.hidden = false;
     vCancelBtn.hidden = false;
     vLiveEl.hidden = false;
 
-    // Visualizador de espectro en tiempo real
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) {
-        audioCtx = new AC();
-        const src = audioCtx.createMediaStreamSource(recStream);
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        src.connect(analyser);
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        const tick = () => {
-          if (!analyser) return;
-          analyser.getByteFrequencyData(data);
-          vSpectrumBars.forEach((bar, idx) => {
-            const val = data[idx % data.length] || 0;
-            const pct = Math.max(14, Math.min(100, Math.round((val / 255) * 100)));
-            bar.style.height = `${pct}%`;
-          });
-          rafId = requestAnimationFrame(tick);
+    recSession = await startVoiceRecording({
+      onTick: (secs) => { vTimerEl.textContent = formatDuration(secs); },
+      onLevels: (data) => paintSpectrumBars(vSpectrumBars, data),
+      onError: (msg) => {
+        resetRecUI();
+        showToast(msg);
+      },
+      onComplete: async (result) => {
+        recSession = null;
+        resetRecUI();
+        if (!result) return;
+
+        const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        const note = {
+          id: generateId('vn'),
+          title: `REC ${timeLabel}`,
+          duration: result.duration,
+          size: result.blob.size,
+          mimeType: result.mimeType,
+          createdAt: new Date().toISOString(),
+          storagePath: '',
+          synced: false,
+          uploading: true
         };
-        tick();
+
+        voiceNotes.push(note);
+        renderVoiceNotes();
+
+        const cloud = await uploadVoiceNoteToCloud(note, result.blob);
+        note.uploading = false;
+        if (cloud.ok) {
+          note.storagePath = cloud.storagePath;
+          note.synced = true;
+          onChange();
+          showToast('Audio guardado en Firebase Storage');
+        } else {
+          const idx = voiceNotes.indexOf(note);
+          if (idx >= 0) voiceNotes.splice(idx, 1);
+          showToast('No se pudo subir a la nube (sin caché local). Verifica tu sesión o conexión.');
+        }
+        if (document.body.contains(vListEl)) renderVoiceNotes();
+        writeDraft();
       }
-    } catch { /* fallback sin analyser */ }
-
-    recTimerId = setInterval(() => {
-      vTimerEl.textContent = formatDuration((Date.now() - recStartMs) / 1000);
-    }, 250);
-
-    mediaRecorder.ondataavailable = e => {
-      if (e.data && e.data.size > 0) recChunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = async () => {
-      const duration = Math.max(1, Math.round((Date.now() - recStartMs) / 1000));
-      const finalMime = mediaRecorder?.mimeType || mimeType || 'audio/webm';
-      const chunks = [...recChunks];
-      stopRecordingResources();
-      if (recCancelled || !chunks.length) return;
-
-      const blob = new Blob(chunks, { type: finalMime });
-      const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      const note = {
-        id: generateId('vn'),
-        title: `REC ${timeLabel}`,
-        duration,
-        size: blob.size,
-        mimeType: finalMime,
-        createdAt: new Date().toISOString(),
-        storagePath: '',
-        synced: false,
-        uploading: true
-      };
-
-      voiceNotes.push(note);
-      renderVoiceNotes();
-
-      const cloud = await uploadVoiceNoteToCloud(note, blob);
-      note.uploading = false;
-      if (cloud.ok) {
-        note.storagePath = cloud.storagePath;
-        note.synced = true;
-        onChange();
-        showToast('Audio guardado en Firebase Storage');
-      } else {
-        const idx = voiceNotes.indexOf(note);
-        if (idx >= 0) voiceNotes.splice(idx, 1);
-        showToast('No se pudo subir a la nube (sin caché local). Verifica tu sesión o conexión.');
-      }
-      if (document.body.contains(vListEl)) renderVoiceNotes();
-      writeDraft();
-    };
-
-    mediaRecorder.start(250);
+    });
   });
 
   vStopBtn.addEventListener('click', () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
+    recSession?.stop();
   });
 
   vCancelBtn.addEventListener('click', () => {
-    recCancelled = true;
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    } else {
-      stopRecordingResources();
-    }
+    recSession?.cancel();
+    recSession = null;
+    resetRecUI();
     showToast('Grabación cancelada');
   });
 
@@ -1354,12 +1429,8 @@ function renderEditor(container, existing = null, presetDate = '') {
   const onRouteLeave = () => {
     if (!document.body.contains(editor)) {
       stopActivePlayback();
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        recCancelled = true;
-        mediaRecorder.stop();
-      } else {
-        stopRecordingResources();
-      }
+      recSession?.cancel();
+      recSession = null;
       window.removeEventListener('hashchange', onRouteLeave);
     }
   };

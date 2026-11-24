@@ -1418,17 +1418,78 @@ mark.search-hit {
   flex-shrink: 0;
 }
 
+.vnote-speed-btn {
+  min-width: 44px;
+  min-height: 28px;
+  padding: 0 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.vnote-speed-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.vnote-speed-btn.is-fast {
+  color: var(--cyber-yellow);
+  background: var(--cyber-yellow-bg);
+  border-color: var(--cyber-yellow-border);
+}
+
+/* Modal rápido de Nuevo audio desde el listado del Diario */
+.btn-voice-quick {
+  min-height: 40px;
+}
+
+.qvoice-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.qvoice-live {
+  margin-bottom: 0;
+}
+
+.qvoice-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.qvoice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 768px) {
   .voice-cyber-deck {
     padding: 14px 16px;
   }
 
-  .vnote-title-input {
+  .vnote-title-input,
+  .qvoice-modal .form-input {
     font-size: 16px;
   }
 
   .vnote-item {
     padding: 8px 10px;
     gap: 8px;
+  }
+
+  .vnote-speed-btn {
+    min-height: 36px;
   }
 }

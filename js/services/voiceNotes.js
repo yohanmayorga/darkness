@@ -166,3 +166,112 @@ export function getVoiceStorageStats(entries = []) {
     percent
   };
 }
+
+/**
+ * Inicia una sesión reutilizable de captura de audio con MediaRecorder + espectro en vivo.
+ * Devuelve { stop(), cancel() }.
+ */
+export async function startVoiceRecording({ onTick, onLevels, onComplete, onError } = {}) {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    onError?.('Tu navegador no soporta grabación de audio');
+    return null;
+  }
+
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    onError?.('Permiso de micrófono denegado');
+    return null;
+  }
+
+  const mimeType = pickSupportedAudioMime();
+  let recorder;
+  try {
+    recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 48000 })
+      : new MediaRecorder(stream);
+  } catch {
+    recorder = new MediaRecorder(stream);
+  }
+
+  const chunks = [];
+  const startMs = Date.now();
+  let cancelled = false;
+  let timerId = null;
+  let audioCtx = null;
+  let analyser = null;
+  let rafId = null;
+
+  const cleanup = () => {
+    clearInterval(timerId);
+    timerId = null;
+    cancelAnimationFrame(rafId);
+    rafId = null;
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    if (audioCtx) {
+      audioCtx.close().catch(() => {});
+      audioCtx = null;
+      analyser = null;
+    }
+  };
+
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC && typeof onLevels === 'function') {
+      audioCtx = new AC();
+      const src = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      src.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        if (!analyser) return;
+        analyser.getByteFrequencyData(data);
+        onLevels(data);
+        rafId = requestAnimationFrame(tick);
+      };
+      tick();
+    }
+  } catch { /* fallback sin analyser */ }
+
+  timerId = setInterval(() => {
+    onTick?.((Date.now() - startMs) / 1000);
+  }, 250);
+
+  recorder.ondataavailable = e => {
+    if (e.data && e.data.size > 0) chunks.push(e.data);
+  };
+
+  recorder.onstop = () => {
+    const duration = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+    const finalMime = recorder?.mimeType || mimeType || 'audio/webm';
+    cleanup();
+    if (cancelled || !chunks.length) {
+      onComplete?.(null);
+      return;
+    }
+    const blob = new Blob(chunks, { type: finalMime });
+    onComplete?.({ blob, duration, mimeType: finalMime });
+  };
+
+  recorder.start(250);
+
+  return {
+    stop: () => {
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      else cleanup();
+    },
+    cancel: () => {
+      cancelled = true;
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      else {
+        cleanup();
+        onComplete?.(null);
+      }
+    }
+  };
+}

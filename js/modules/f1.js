@@ -11,7 +11,8 @@ import {
 import { todayISO } from '../services/db.js?v=6.9.0';
 import { icon } from '../components/icons.js?v=3.4.0';
 import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
-import { renderF1WorldMapHTML, bindF1WorldMap } from '../components/f1Map.js?v=2.0.0';
+import { renderF1WorldMapHTML, bindF1WorldMap } from '../components/f1Map.js?v=2.2.0';
+import { fetchCircuitTrackSvgData, renderCircuitInfoHTML } from '../components/f1Circuits.js?v=1.1.0';
 import { getTeamMeta } from '../components/f1Teams.js?v=1.0.0';
 import { openModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
@@ -1262,34 +1263,67 @@ async function openConstructorDetail(container, constructorId) {
   paintView(container);
 }
 
-async function openRoundModal(season, round) {
+async function openRoundModal(season, round, { initialTab = 'race', raceObj = null } = {}) {
+  const knownRace = raceObj || state.data?.races?.find(r => String(r.round) === String(round)) || null;
+
   openModal({
-    title: `Ronda ${round} · Temporada ${season}`,
+    title: knownRace ? `${knownRace.raceName} (${season})` : `Ronda ${round} · Temporada ${season}`,
     contentHTML: `
       <div class="f1-loading-box">
         <div class="f1-loading-spinner"></div>
-        <p>Cargando resultados completos de la ronda...</p>
+        <p>Cargando trazado y detalles del Gran Premio...</p>
       </div>
     `
   });
 
   try {
-    const details = await fetchRoundDetails(season, round);
-    state.asideRoundCache.set(`${season}_${round}`, details);
+    const cacheKey = `${season}_${round}`;
+    const cachedDetails = state.asideRoundCache.get(cacheKey);
+    const detailsPromise = cachedDetails
+      ? Promise.resolve(cachedDetails)
+      : fetchRoundDetails(season, round).catch(() => ({ race: null, quali: null, sprint: null, pits: [] }));
+
+    const circuitId = knownRace?.Circuit?.circuitId || '';
+    let trackSvgData = null;
+    let loadingTrack = Boolean(circuitId);
+
+    const details = await detailsPromise;
+    if (details.race || details.quali) {
+      state.asideRoundCache.set(cacheKey, details);
+    }
+
     const body = document.querySelector('#active-modal .modal-body');
     const titleEl = document.querySelector('#active-modal .modal-title');
     if (!body) return;
 
-    const raceName = details.race?.raceName || details.quali?.raceName || `Ronda ${round}`;
+    const mergedRace = {
+      ...(knownRace || {}),
+      ...(details.race || {}),
+      Circuit: details.race?.Circuit || details.quali?.Circuit || knownRace?.Circuit || {}
+    };
+
+    const resolvedCircuitId = mergedRace.Circuit?.circuitId || circuitId;
+    loadingTrack = Boolean(resolvedCircuitId);
+
+    const raceName = mergedRace.raceName || details.quali?.raceName || `Ronda ${round}`;
     if (titleEl) titleEl.textContent = `${raceName} (${season})`;
 
-    let modalTab = 'race';
+    const hasRaceResults = Boolean(details.race?.Results?.length);
+    const hasQualiResults = Boolean(details.quali?.QualifyingResults?.length);
+    const hasSprint = Boolean(details.sprint?.SprintResults?.length);
+    const hasPits = Boolean(details.pits?.length);
+
+    let modalTab = initialTab;
+    if (modalTab === 'race' && !hasRaceResults) {
+      modalTab = 'circuit';
+    }
+
     const renderModalContent = () => {
-      const hasSprint = Boolean(details.sprint?.SprintResults?.length);
-      const hasPits = Boolean(details.pits?.length);
       let inner = '';
 
-      if (modalTab === 'race') {
+      if (modalTab === 'circuit') {
+        inner = renderCircuitInfoHTML(mergedRace, trackSvgData, loadingTrack);
+      } else if (modalTab === 'race') {
         inner = renderRaceResultsTableHTML(details.race, true);
       } else if (modalTab === 'quali') {
         inner = renderQualiResultsTableHTML(details.quali);
@@ -1327,8 +1361,9 @@ async function openRoundModal(season, round) {
       body.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
           <div class="f1-subtabs">
-            <button type="button" class="f1-subtab-btn ${modalTab === 'race' ? 'active' : ''}" data-m-tab="race">Carrera</button>
-            <button type="button" class="f1-subtab-btn ${modalTab === 'quali' ? 'active' : ''}" data-m-tab="quali">Clasificación</button>
+            <button type="button" class="f1-subtab-btn ${modalTab === 'circuit' ? 'active' : ''}" data-m-tab="circuit">Circuito & Pista</button>
+            ${hasRaceResults ? `<button type="button" class="f1-subtab-btn ${modalTab === 'race' ? 'active' : ''}" data-m-tab="race">Carrera</button>` : ''}
+            ${hasQualiResults ? `<button type="button" class="f1-subtab-btn ${modalTab === 'quali' ? 'active' : ''}" data-m-tab="quali">Clasificación</button>` : ''}
             ${hasSprint ? `<button type="button" class="f1-subtab-btn ${modalTab === 'sprint' ? 'active' : ''}" data-m-tab="sprint">Sprint</button>` : ''}
             ${hasPits ? `<button type="button" class="f1-subtab-btn ${modalTab === 'pits' ? 'active' : ''}" data-m-tab="pits">Pit Stops (${details.pits.length})</button>` : ''}
           </div>
@@ -1345,6 +1380,23 @@ async function openRoundModal(season, round) {
     };
 
     renderModalContent();
+
+    if (resolvedCircuitId) {
+      fetchCircuitTrackSvgData(resolvedCircuitId, mergedRace.Circuit?.Location)
+        .then(svg => {
+          trackSvgData = svg;
+          loadingTrack = false;
+          if (document.body.contains(body) && modalTab === 'circuit') {
+            renderModalContent();
+          }
+        })
+        .catch(() => {
+          loadingTrack = false;
+          if (document.body.contains(body) && modalTab === 'circuit') {
+            renderModalContent();
+          }
+        });
+    }
   } catch (err) {
     const body = document.querySelector('#active-modal .modal-body');
     if (body) {
@@ -1587,19 +1639,18 @@ function paintView(container) {
   // Bind Mapa Mundi Cyberpunk
   if (state.data?.races?.length && state.heroMode === 'map') {
     bindF1WorldMap(container, {
-      onSelectRound: (round, status) => {
-        const race = state.data.races.find(r => r.round === round);
+      onSelectRound: (round) => {
+        const race = state.data.races.find(r => String(r.round) === String(round));
         if (race?.date) {
           const [y, m] = race.date.split('-').map(Number);
           state.calYear = y;
           state.calMonth = m - 1;
           state.selectedDate = race.date;
-          if (status === 'past') {
-            openRoundModal(state.data.season, round);
-          } else {
-            paintView(container);
-          }
         }
+        openRoundModal(state.data.season, round, {
+          initialTab: 'circuit',
+          raceObj: race || null
+        });
       }
     });
   }

@@ -323,6 +323,7 @@ export function setFirebaseConfig(cfg) {
     appId: String(cfg.appId || '').trim()
   }));
   firebaseBundle = null;
+  firebaseStorageBundle = null;
 }
 
 export function isFirebaseConfigured() {
@@ -331,6 +332,30 @@ export function isFirebaseConfigured() {
 }
 
 export const isSupabaseConfigured = isFirebaseConfigured;
+
+let firebaseStorageBundle = null;
+
+/**
+ * Carga bajo demanda el módulo Firebase Storage para archivos binarios (notas de voz)
+ */
+export async function getFirebaseStorageClient() {
+  const fb = await getFirebaseClient();
+  if (!fb) return null;
+  if (firebaseStorageBundle) return firebaseStorageBundle;
+
+  const cfg = getFirebaseConfig();
+  if (!cfg.storageBucket) return null;
+
+  try {
+    const storageMod = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js');
+    const storage = storageMod.getStorage(fb.app, `gs://${cfg.storageBucket.replace(/^gs:\/\//, '')}`);
+    firebaseStorageBundle = { ...fb, storage, storageMod };
+    return firebaseStorageBundle;
+  } catch (err) {
+    console.warn('No se pudo cargar Firebase Storage:', err);
+    return null;
+  }
+}
 
 /**
  * Inicializa dinámicamente Firebase (App, Auth, Firestore) vía ESM CDN oficial de Google

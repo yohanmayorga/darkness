@@ -1,5 +1,15 @@
-import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=6.9.0';
-import { icon } from '../components/icons.js?v=1.4.0';
+import { getStore, saveStore, generateId, todayISO, fileToDataUrl } from '../services/db.js?v=6.9.1';
+import {
+  uploadVoiceNoteToCloud,
+  fetchVoiceNoteBlobUrl,
+  deleteVoiceNoteFiles,
+  purgeLegacyVoiceCache,
+  pickSupportedAudioMime,
+  formatDuration,
+  formatBytes,
+  getVoiceStorageStats
+} from '../services/voiceNotes.js?v=1.1.0';
+import { icon } from '../components/icons.js?v=1.5.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML } from '../components/calendar.js?v=2.6.0';
 import {
@@ -163,6 +173,38 @@ export function renderJournal(container, params = []) {
 /* ==========================================================================
    LISTADO
    ========================================================================== */
+function buildVoiceHudHTML(entries) {
+  const stats = getVoiceStorageStats(entries);
+  const barWidth = stats.totalBytes > 0 ? Math.max(1.5, stats.percent) : 0;
+  const levelClass = stats.percent >= 90 ? 'is-critical' : stats.percent >= 70 ? 'is-warn' : '';
+  const syncBadge = stats.totalCount === 0
+    ? '<span class="vhud-badge">CLOUD VAULT // 5 GB</span>'
+    : '<span class="vhud-badge is-synced">SOLO NUBE · SIN CACHÉ</span>';
+
+  return `
+    <section class="voice-storage-hud ${levelClass}" id="journal-voice-hud" aria-label="Nivel de memoria de notas de voz">
+      <div class="vhud-top">
+        <div class="vhud-title-wrap">
+          <span class="vhud-tag">MEMORIA // AUDIO_VAULT</span>
+          <span class="vhud-metrics mono">
+            <strong>${formatBytes(stats.totalBytes)}</strong>
+            <span class="vhud-sep">/</span>
+            <span>5.00 GB</span>
+            <span class="vhud-pct">(${stats.percent.toFixed(2)}%)</span>
+          </span>
+        </div>
+        <div class="vhud-right">
+          <span class="vhud-sub mono">${stats.totalCount} ${stats.totalCount === 1 ? 'audio' : 'audios'} · ${formatDuration(stats.totalDuration)}</span>
+          ${syncBadge}
+        </div>
+      </div>
+      <div class="vhud-bar-track" role="progressbar" aria-valuenow="${stats.percent.toFixed(2)}" aria-valuemin="0" aria-valuemax="100">
+        <div class="vhud-bar-fill" style="width:${barWidth.toFixed(2)}%"></div>
+      </div>
+    </section>
+  `;
+}
+
 function renderList(container) {
   const entries = getEntries();
   if (state.calYear === null) {
@@ -191,6 +233,8 @@ function renderList(container) {
         <a href="#/journal/new" class="btn btn-primary">${icon('plus')} Nueva Entrada</a>
       </div>
     </header>
+
+    <div id="journal-voice-hud-slot">${buildVoiceHudHTML(entries)}</div>
 
     <div class="journal-layout">
       <div class="journal-main">
@@ -239,9 +283,10 @@ function renderList(container) {
     let list = entries;
     if (state.selectedDate) list = list.filter(e => e.date === state.selectedDate);
     if (nq) {
-      list = list.filter(e =>
-        normalizeText(`${e.title || ''} ${entryPlain(e)} ${(e.tags || []).join(' ')}`).includes(nq)
-      );
+      list = list.filter(e => {
+        const voiceTxt = (e.voiceNotes || []).map(v => v.title || '').join(' ');
+        return normalizeText(`${e.title || ''} ${entryPlain(e)} ${(e.tags || []).join(' ')} ${voiceTxt}`).includes(nq);
+      });
     }
 
     if (entries.length === 0) {
@@ -287,6 +332,13 @@ function renderList(container) {
         const plain = entryPlain(e);
         const words = countWords(plain);
         const att = attachmentsOf(e).length;
+        const voices = Array.isArray(e.voiceNotes) ? e.voiceNotes : [];
+        const voiceSecs = voices.reduce((acc, v) => acc + (Number(v.duration) || 0), 0);
+        const excerptHTML = plain
+          ? highlight(buildExcerpt(plain, q), q)
+          : voices.length
+            ? `<span class="je-voice-only">${icon('waveform')} ${voices.length} ${voices.length === 1 ? 'nota de voz' : 'notas de voz'} (${formatDuration(voiceSecs)})</span>`
+            : '<span class="text-muted">Entrada vacía</span>';
 
         html += `
           <a href="#/journal/edit/${encodeURIComponent(e.id)}" class="journal-entry-card">
@@ -297,9 +349,10 @@ function renderList(container) {
             </div>
             <div class="je-body">
               <h3 class="je-title">${highlight(e.title || 'Sin título', q)}</h3>
-              <p class="je-excerpt">${plain ? highlight(buildExcerpt(plain, q), q) : '<span class="text-muted">Entrada vacía</span>'}</p>
+              <p class="je-excerpt">${excerptHTML}</p>
               <div class="je-meta mono">
                 <span>${words} ${words === 1 ? 'palabra' : 'palabras'}</span>
+                ${voices.length ? `<span class="je-voice-pill">${icon('mic')} ${voices.length} · ${formatDuration(voiceSecs)}</span>` : ''}
                 ${att ? `<span>${icon('paperclip')} ${att}</span>` : ''}
                 ${(e.tags || []).map(t => `<span>#${highlight(t, q)}</span>`).join('')}
               </div>
@@ -382,6 +435,7 @@ function renderList(container) {
 
   renderResults();
   renderCalendar();
+  purgeLegacyVoiceCache();
 }
 
 /* ==========================================================================
@@ -392,6 +446,7 @@ function renderEditor(container, existing = null, presetDate = '') {
   const createdAt = existing?.createdAt || new Date().toISOString();
   let draftKey = `darkness_journal_draft_${currentId || 'new'}`;
   let attachments = existing ? attachmentsOf(existing) : [];
+  let voiceNotes = Array.isArray(existing?.voiceNotes) ? existing.voiceNotes.map(v => ({ ...v })) : [];
   let dirty = false;
   let savedRange = null;
   let draftTimer = null;
@@ -415,6 +470,9 @@ function renderEditor(container, existing = null, presetDate = '') {
         content: draft.content || initial.content,
         tags: Array.isArray(draft.tags) ? draft.tags : initial.tags
       };
+      if (Array.isArray(draft.voiceNotes)) {
+        voiceNotes = draft.voiceNotes.map(v => ({ ...v, uploading: false }));
+      }
       restoredDraft = true;
     }
   } catch { /* borrador corrupto: se ignora */ }
@@ -516,6 +574,39 @@ function renderEditor(container, existing = null, presetDate = '') {
 
         <div id="editor-body" class="editor-body prose" contenteditable="true" spellcheck="true"
           data-placeholder="Empieza a escribir…" aria-label="Contenido de la entrada"></div>
+
+        <section class="voice-cyber-deck" id="voice-cyber-deck" aria-label="Notas de voz">
+          <div class="vdeck-header">
+            <div class="vdeck-title-group">
+              <span class="vdeck-eyebrow mono">AUDIO_REC // BITÁCORA VOCAL</span>
+              <span class="vdeck-count mono" id="vdeck-count">0 pistas</span>
+            </div>
+            <div class="vdeck-controls" id="vdeck-controls">
+              <button type="button" class="btn-voice-rec" id="btn-voice-rec">
+                ${icon('mic')} <span>GRABAR VOZ</span>
+              </button>
+              <button type="button" class="btn-voice-stop" id="btn-voice-stop" hidden>
+                ${icon('stop')} <span>DETENER</span>
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btn-voice-cancel" hidden>
+                ${icon('close')} Cancelar
+              </button>
+            </div>
+          </div>
+
+          <div class="vdeck-live" id="vdeck-live" hidden>
+            <div class="vdeck-rec-badge mono">
+              <span class="vdeck-rec-dot"></span>
+              <span>REC</span>
+              <span id="vdeck-timer">00:00</span>
+            </div>
+            <div class="vdeck-spectrum" id="vdeck-spectrum" aria-hidden="true">
+              ${'<span></span>'.repeat(20)}
+            </div>
+          </div>
+
+          <div class="vdeck-list" id="vdeck-list"></div>
+        </section>
 
         <div class="editor-extras">
           <div class="form-group" style="margin:0;">
@@ -638,6 +729,7 @@ function renderEditor(container, existing = null, presetDate = '') {
         title: titleInput.value,
         content: editor.innerHTML,
         tags: parseTags(),
+        voiceNotes,
         savedAt: new Date().toISOString()
       }));
     } catch { /* sin espacio para borrador */ }
@@ -650,6 +742,334 @@ function renderEditor(container, existing = null, presetDate = '') {
     clearTimeout(draftTimer);
     draftTimer = setTimeout(writeDraft, 700);
   }
+
+  /* ---------- Notas de voz (Cyberpunk Audio Deck) ---------- */
+  const vCountEl = container.querySelector('#vdeck-count');
+  const vListEl = container.querySelector('#vdeck-list');
+  const vRecBtn = container.querySelector('#btn-voice-rec');
+  const vStopBtn = container.querySelector('#btn-voice-stop');
+  const vCancelBtn = container.querySelector('#btn-voice-cancel');
+  const vLiveEl = container.querySelector('#vdeck-live');
+  const vTimerEl = container.querySelector('#vdeck-timer');
+  const vSpectrumBars = [...container.querySelectorAll('#vdeck-spectrum span')];
+
+  let mediaRecorder = null;
+  let recStream = null;
+  let recChunks = [];
+  let recStartMs = 0;
+  let recTimerId = null;
+  let recCancelled = false;
+  let audioCtx = null;
+  let analyser = null;
+  let rafId = null;
+
+  let activeAudio = null;
+  let activeAudioUrl = '';
+  let activePlayingId = null;
+
+  const stopRecordingResources = () => {
+    clearInterval(recTimerId);
+    recTimerId = null;
+    cancelAnimationFrame(rafId);
+    rafId = null;
+    if (recStream) {
+      recStream.getTracks().forEach(t => t.stop());
+      recStream = null;
+    }
+    if (audioCtx) {
+      audioCtx.close().catch(() => {});
+      audioCtx = null;
+      analyser = null;
+    }
+    vSpectrumBars.forEach(b => { b.style.height = '18%'; });
+    vRecBtn.hidden = false;
+    vStopBtn.hidden = true;
+    vCancelBtn.hidden = true;
+    vLiveEl.hidden = true;
+  };
+
+  const stopActivePlayback = () => {
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.src = '';
+      activeAudio = null;
+    }
+    if (activeAudioUrl) {
+      URL.revokeObjectURL(activeAudioUrl);
+      activeAudioUrl = '';
+    }
+    activePlayingId = null;
+  };
+
+  const renderVoiceNotes = () => {
+    const totalDur = voiceNotes.reduce((acc, v) => acc + (Number(v.duration) || 0), 0);
+    vCountEl.textContent = voiceNotes.length
+      ? `${voiceNotes.length} ${voiceNotes.length === 1 ? 'pista' : 'pistas'} · ${formatDuration(totalDur)}`
+      : '0 pistas';
+
+    if (!voiceNotes.length) {
+      vListEl.innerHTML = '<div class="vdeck-empty mono">SIN REGISTROS DE VOZ // PULSA «GRABAR VOZ» PARA CAPTURAR</div>';
+      return;
+    }
+
+    vListEl.innerHTML = voiceNotes.map((vn, i) => {
+      const isPlaying = activePlayingId === vn.id && activeAudio && !activeAudio.paused;
+      const syncTag = vn.uploading
+        ? '<span class="vnote-badge is-uploading">SUBIENDO…</span>'
+        : vn.synced && vn.storagePath
+          ? '<span class="vnote-badge is-cloud">CLOUD</span>'
+          : '<span class="vnote-badge is-local">LOCAL</span>';
+
+      return `
+        <div class="vnote-item ${isPlaying ? 'is-playing' : ''}" data-vn-id="${escapeHTML(vn.id)}">
+          <button type="button" class="vnote-play-btn" data-vn-play="${i}" aria-label="${isPlaying ? 'Pausar' : 'Reproducir'} nota de voz">
+            ${icon(isPlaying ? 'pause' : 'play')}
+          </button>
+          <div class="vnote-body">
+            <div class="vnote-top">
+              <input type="text" class="vnote-title-input" data-vn-title="${i}" value="${escapeHTML(vn.title || `Nota de voz #${i + 1}`)}" maxlength="80" aria-label="Nombre de nota de voz" />
+              <div class="vnote-badges mono">
+                <span class="vnote-size">${formatBytes(vn.size || 0)}</span>
+                ${syncTag}
+              </div>
+            </div>
+            <div class="vnote-progress-row">
+              <input type="range" class="vnote-seek" data-vn-seek="${i}" min="0" max="${Math.max(1, Math.round(vn.duration || 1))}" value="0" step="0.1" aria-label="Progreso de audio" />
+              <span class="vnote-time mono" data-vn-time="${i}">00:00 / ${formatDuration(vn.duration || 0)}</span>
+            </div>
+          </div>
+          <button type="button" class="vnote-del-btn" data-vn-del="${i}" title="Eliminar audio" aria-label="Eliminar nota de voz">
+            ${icon('trash')}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    vListEl.querySelectorAll('[data-vn-title]').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const idx = Number(inp.dataset.vnTitle);
+        if (voiceNotes[idx]) {
+          voiceNotes[idx].title = inp.value.trim() || `Nota de voz #${idx + 1}`;
+          onChange();
+        }
+      });
+    });
+
+    vListEl.querySelectorAll('[data-vn-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = Number(btn.dataset.vnDel);
+        const target = voiceNotes[idx];
+        if (!target) return;
+        if (!window.confirm(`¿Eliminar "${target.title || 'esta nota de voz'}" permanentemente?`)) return;
+        if (activePlayingId === target.id) stopActivePlayback();
+        voiceNotes.splice(idx, 1);
+        renderVoiceNotes();
+        onChange();
+        await deleteVoiceNoteFiles(target);
+        showToast('Nota de voz eliminada');
+      });
+    });
+
+    vListEl.querySelectorAll('[data-vn-play]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = Number(btn.dataset.vnPlay);
+        const vn = voiceNotes[idx];
+        if (!vn) return;
+        const row = vListEl.querySelector(`[data-vn-id="${CSS.escape(vn.id)}"]`);
+        const seekEl = row?.querySelector('[data-vn-seek]');
+        const timeEl = row?.querySelector('[data-vn-time]');
+
+        if (activePlayingId === vn.id && activeAudio) {
+          if (activeAudio.paused) {
+            await activeAudio.play().catch(() => {});
+            btn.innerHTML = icon('pause');
+            row?.classList.add('is-playing');
+          } else {
+            activeAudio.pause();
+            btn.innerHTML = icon('play');
+            row?.classList.remove('is-playing');
+          }
+          return;
+        }
+
+        stopActivePlayback();
+        vListEl.querySelectorAll('.vnote-item').forEach(el => {
+          el.classList.remove('is-playing');
+          const pBtn = el.querySelector('.vnote-play-btn');
+          if (pBtn) pBtn.innerHTML = icon('play');
+        });
+
+        btn.disabled = true;
+        try {
+          const src = await fetchVoiceNoteBlobUrl(vn);
+          activeAudioUrl = src;
+          const audio = new Audio(src);
+          activeAudio = audio;
+          activePlayingId = vn.id;
+
+          audio.addEventListener('loadedmetadata', () => {
+            const dur = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : (vn.duration || 1);
+            if (seekEl) seekEl.max = String(dur);
+          });
+
+          audio.addEventListener('timeupdate', () => {
+            const cur = audio.currentTime || 0;
+            const dur = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : (vn.duration || 0);
+            if (seekEl) {
+              seekEl.max = String(Math.max(1, dur));
+              seekEl.value = String(cur);
+            }
+            if (timeEl) timeEl.textContent = `${formatDuration(cur)} / ${formatDuration(dur)}`;
+          });
+
+          audio.addEventListener('ended', () => {
+            stopActivePlayback();
+            btn.innerHTML = icon('play');
+            row?.classList.remove('is-playing');
+            if (seekEl) seekEl.value = '0';
+            if (timeEl) timeEl.textContent = `00:00 / ${formatDuration(vn.duration || 0)}`;
+          });
+
+          if (seekEl) {
+            seekEl.oninput = () => {
+              if (activeAudio === audio) audio.currentTime = Number(seekEl.value) || 0;
+            };
+          }
+
+          await audio.play();
+          btn.innerHTML = icon('pause');
+          row?.classList.add('is-playing');
+        } catch (err) {
+          stopActivePlayback();
+          showToast(err?.message || 'No se pudo descargar el audio');
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  };
+
+  vRecBtn.addEventListener('click', async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      showToast('Tu navegador no soporta grabación de audio');
+      return;
+    }
+
+    try {
+      recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      showToast('Permiso de micrófono denegado');
+      return;
+    }
+
+    const mimeType = pickSupportedAudioMime();
+    try {
+      mediaRecorder = mimeType
+        ? new MediaRecorder(recStream, { mimeType, audioBitsPerSecond: 48000 })
+        : new MediaRecorder(recStream);
+    } catch {
+      mediaRecorder = new MediaRecorder(recStream);
+    }
+
+    recChunks = [];
+    recCancelled = false;
+    recStartMs = Date.now();
+    vTimerEl.textContent = '00:00';
+    vRecBtn.hidden = true;
+    vStopBtn.hidden = false;
+    vCancelBtn.hidden = false;
+    vLiveEl.hidden = false;
+
+    // Visualizador de espectro en tiempo real
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        audioCtx = new AC();
+        const src = audioCtx.createMediaStreamSource(recStream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        src.connect(analyser);
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        const tick = () => {
+          if (!analyser) return;
+          analyser.getByteFrequencyData(data);
+          vSpectrumBars.forEach((bar, idx) => {
+            const val = data[idx % data.length] || 0;
+            const pct = Math.max(14, Math.min(100, Math.round((val / 255) * 100)));
+            bar.style.height = `${pct}%`;
+          });
+          rafId = requestAnimationFrame(tick);
+        };
+        tick();
+      }
+    } catch { /* fallback sin analyser */ }
+
+    recTimerId = setInterval(() => {
+      vTimerEl.textContent = formatDuration((Date.now() - recStartMs) / 1000);
+    }, 250);
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data && e.data.size > 0) recChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const duration = Math.max(1, Math.round((Date.now() - recStartMs) / 1000));
+      const finalMime = mediaRecorder?.mimeType || mimeType || 'audio/webm';
+      const chunks = [...recChunks];
+      stopRecordingResources();
+      if (recCancelled || !chunks.length) return;
+
+      const blob = new Blob(chunks, { type: finalMime });
+      const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      const note = {
+        id: generateId('vn'),
+        title: `REC ${timeLabel}`,
+        duration,
+        size: blob.size,
+        mimeType: finalMime,
+        createdAt: new Date().toISOString(),
+        storagePath: '',
+        synced: false,
+        uploading: true
+      };
+
+      voiceNotes.push(note);
+      renderVoiceNotes();
+
+      const cloud = await uploadVoiceNoteToCloud(note, blob);
+      note.uploading = false;
+      if (cloud.ok) {
+        note.storagePath = cloud.storagePath;
+        note.synced = true;
+        onChange();
+        showToast('Audio guardado en Firebase Storage');
+      } else {
+        const idx = voiceNotes.indexOf(note);
+        if (idx >= 0) voiceNotes.splice(idx, 1);
+        showToast('No se pudo subir a la nube (sin caché local). Verifica tu sesión o conexión.');
+      }
+      if (document.body.contains(vListEl)) renderVoiceNotes();
+      writeDraft();
+    };
+
+    mediaRecorder.start(250);
+  });
+
+  vStopBtn.addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+  });
+
+  vCancelBtn.addEventListener('click', () => {
+    recCancelled = true;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    } else {
+      stopRecordingResources();
+    }
+    showToast('Grabación cancelada');
+  });
 
   /* ---------- Adjuntos ---------- */
   const renderAttachments = () => {
@@ -677,13 +1097,15 @@ function renderEditor(container, existing = null, presetDate = '') {
     const content = sanitizeHTML(editor.innerHTML);
     const plain = stripHTML(content);
     const now = new Date().toISOString();
+    const cleanVoices = voiceNotes.map(({ uploading, ...rest }) => rest);
     const record = {
       id: currentId || generateId('jr'),
       date: dateInput.value || todayISO(),
-      title: titleInput.value.trim() || plain.slice(0, 60) || 'Sin título',
+      title: titleInput.value.trim() || plain.slice(0, 60) || (cleanVoices.length ? 'Nota de voz' : 'Sin título'),
       content,
       tags: parseTags(),
       attachments,
+      voiceNotes: cleanVoices,
       createdAt,
       updatedAt: now
     };
@@ -880,6 +1302,8 @@ function renderEditor(container, existing = null, presetDate = '') {
 
   deleteBtn.addEventListener('click', () => {
     if (!currentId || !window.confirm('¿Eliminar esta entrada de forma permanente?')) return;
+    stopActivePlayback();
+    voiceNotes.forEach(vn => deleteVoiceNoteFiles(vn));
     const store = getStore();
     store.journalEntries = (store.journalEntries || []).filter(x => x.id !== currentId);
     saveStore(store);
@@ -914,8 +1338,24 @@ function renderEditor(container, existing = null, presetDate = '') {
   };
   document.addEventListener('keydown', window._journalKeyHandler);
 
+  // Limpiar recursos de audio/micrófono si el usuario navega fuera del editor
+  const onRouteLeave = () => {
+    if (!document.body.contains(editor)) {
+      stopActivePlayback();
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        recCancelled = true;
+        mediaRecorder.stop();
+      } else {
+        stopRecordingResources();
+      }
+      window.removeEventListener('hashchange', onRouteLeave);
+    }
+  };
+  window.addEventListener('hashchange', onRouteLeave);
+
   /* ---------- Inicialización ---------- */
   renderAttachments();
+  renderVoiceNotes();
   updateCounts();
   if (restoredDraft) {
     dirty = true;

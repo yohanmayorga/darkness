@@ -37,8 +37,12 @@ const DEFAULT_FINANCE_CATEGORIES = {
 
 const ACCOUNT_KEYS = ['bank', 'binance', 'bolivares', 'cash', 'other'];
 
+function sortCategories(list) {
+  return [...list].sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+}
+
 function sanitizeCategoryList(list, fallback) {
-  if (!Array.isArray(list) || list.length === 0) return [...fallback];
+  if (!Array.isArray(list) || list.length === 0) return sortCategories(fallback);
   const seen = new Set();
   const clean = [];
   list.forEach(item => {
@@ -49,7 +53,7 @@ function sanitizeCategoryList(list, fallback) {
     seen.add(key);
     clean.push(name);
   });
-  return clean.length > 0 ? clean : [...fallback];
+  return clean.length > 0 ? sortCategories(clean) : sortCategories(fallback);
 }
 
 function ensureFinance(store) {
@@ -67,8 +71,8 @@ function ensureFinance(store) {
   });
   if (!f.categories || typeof f.categories !== 'object') {
     f.categories = {
-      expense: [...DEFAULT_FINANCE_CATEGORIES.expense],
-      income: [...DEFAULT_FINANCE_CATEGORIES.income]
+      expense: sortCategories(DEFAULT_FINANCE_CATEGORIES.expense),
+      income: sortCategories(DEFAULT_FINANCE_CATEGORIES.income)
     };
   } else {
     f.categories.expense = sanitizeCategoryList(f.categories.expense, DEFAULT_FINANCE_CATEGORIES.expense);
@@ -85,7 +89,7 @@ function ensureFinance(store) {
 function getCategoriesByType(store, type) {
   const f = ensureFinance(store);
   const key = type === 'income' ? 'income' : 'expense';
-  return f.categories[key];
+  return sortCategories(f.categories[key]);
 }
 
 function getAccountLabel(key) {
@@ -400,9 +404,14 @@ export function renderFinance(container) {
                       ${sign}${fmtMoney(tx.amount, currency)}
                     </td>
                     <td style="text-align:right;">
-                      <button type="button" class="btn-icon" data-delete-tx="${tx.id}" title="Eliminar">
-                        ${icon('trash')}
-                      </button>
+                      <div style="display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;">
+                        <button type="button" class="btn-icon" data-edit-tx="${tx.id}" title="Editar" aria-label="Editar">
+                          ${icon('edit')}
+                        </button>
+                        <button type="button" class="btn-icon" data-delete-tx="${tx.id}" title="Eliminar" aria-label="Eliminar">
+                          ${icon('trash')}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 `;
@@ -538,6 +547,17 @@ export function renderFinance(container) {
     });
   });
 
+  // Editar movimiento del historial
+  container.querySelectorAll('[data-edit-tx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-edit-tx');
+      const current = getStore();
+      const existing = (current.transactions || []).find(t => t.id === id);
+      if (!existing) return;
+      openTxModal(currency, () => renderFinance(container), existing);
+    });
+  });
+
   // Eliminar movimiento (solo historial, no altera cuentas)
   container.querySelectorAll('[data-delete-tx]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -562,7 +582,7 @@ export function renderFinance(container) {
   // Registrar nuevo movimiento (solo historial y gráfica, no altera cuentas)
   const newBtn = container.querySelector('#btn-new-tx');
   if (newBtn) {
-    newBtn.addEventListener('click', () => openNewTxModal(currency, () => renderFinance(container)));
+    newBtn.addEventListener('click', () => openTxModal(currency, () => renderFinance(container)));
   }
 }
 
@@ -679,15 +699,30 @@ function openListItemModal(listKey, currency, onDone, existingItem = null) {
   });
 }
 
-function openNewTxModal(currency, onDone, initialType = 'expense') {
-  const safeType = initialType === 'income' ? 'income' : 'expense';
-  const initialCategories = getCategoriesByType(getStore(), safeType);
+function openTxModal(currency, onDone, existingTx = null, initialType = 'expense') {
+  const isEdit = Boolean(existingTx);
+  const safeType = existingTx
+    ? (existingTx.type === 'income' ? 'income' : 'expense')
+    : (initialType === 'income' ? 'income' : 'expense');
 
-  const buildCategoryOptionsHTML = (cats) =>
-    cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  const initialDate = existingTx ? (existingTx.date || todayISO()) : todayISO();
+  const initialAmount = existingTx && existingTx.amount !== undefined ? existingTx.amount : '';
+  const initialCategory = existingTx ? (existingTx.category || '') : '';
+  const initialDescription = existingTx ? (existingTx.description || '') : '';
+
+  const buildCategoryOptionsHTML = (type, selectedCat = '') => {
+    let cats = getCategoriesByType(getStore(), type);
+    if (selectedCat && !cats.some(c => c.toLowerCase() === selectedCat.toLowerCase())) {
+      cats = sortCategories([...cats, selectedCat]);
+    }
+    return cats.map(c => {
+      const isSelected = selectedCat && c.toLowerCase() === selectedCat.toLowerCase() ? 'selected' : '';
+      return `<option value="${escapeHtml(c)}" ${isSelected}>${escapeHtml(c)}</option>`;
+    }).join('');
+  };
 
   openModal({
-    title: 'Registrar Movimiento (Historial)',
+    title: isEdit ? 'Editar Movimiento (Historial)' : 'Registrar Movimiento (Historial)',
     contentHTML: `
       <form id="form-tx">
         <div class="form-grid">
@@ -700,11 +735,11 @@ function openNewTxModal(currency, onDone, initialType = 'expense') {
           </div>
           <div class="form-group">
             <label class="form-label">Fecha</label>
-            <input type="date" name="date" class="form-input" value="${todayISO()}" required />
+            <input type="date" name="date" class="form-input" value="${escapeHtml(initialDate)}" required />
           </div>
           <div class="form-group">
             <label class="form-label">Monto (${currency})</label>
-            <input type="number" step="any" min="1" name="amount" class="form-input" placeholder="0" required />
+            <input type="number" step="any" min="1" name="amount" class="form-input" value="${initialAmount}" placeholder="0" required />
           </div>
           <div class="form-group">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -712,17 +747,17 @@ function openNewTxModal(currency, onDone, initialType = 'expense') {
               <button type="button" class="btn btn-ghost btn-sm" id="btn-tx-manage-cats" style="min-height:24px;height:24px;padding:0 6px;font-size:0.72rem;">Gestionar</button>
             </div>
             <select name="category" class="form-select">
-              ${buildCategoryOptionsHTML(initialCategories)}
+              ${buildCategoryOptionsHTML(safeType, initialCategory)}
             </select>
           </div>
           <div class="form-group full">
             <label class="form-label">Descripción</label>
-            <input type="text" name="description" class="form-input" placeholder="Detalle del movimiento..." required />
+            <input type="text" name="description" class="form-input" value="${escapeHtml(initialDescription)}" placeholder="Detalle del movimiento..." required />
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancel-tx">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar Movimiento</button>
+          <button type="submit" class="btn btn-primary">${isEdit ? 'Guardar cambios' : 'Guardar Movimiento'}</button>
         </div>
       </form>
     `,
@@ -731,17 +766,25 @@ function openNewTxModal(currency, onDone, initialType = 'expense') {
       const categorySelect = modal.querySelector('select[name="category"]');
 
       typeSelect.addEventListener('change', () => {
-        const cats = getCategoriesByType(getStore(), typeSelect.value);
-        categorySelect.innerHTML = buildCategoryOptionsHTML(cats);
+        categorySelect.innerHTML = buildCategoryOptionsHTML(typeSelect.value);
       });
 
       const manageBtn = modal.querySelector('#btn-tx-manage-cats');
       if (manageBtn) {
         manageBtn.addEventListener('click', () => {
           const currentType = typeSelect.value;
+          const draftTx = isEdit ? {
+            ...existingTx,
+            type: currentType,
+            date: modal.querySelector('input[name="date"]')?.value || existingTx.date,
+            amount: modal.querySelector('input[name="amount"]')?.value || existingTx.amount,
+            category: categorySelect.value,
+            description: modal.querySelector('input[name="description"]')?.value || existingTx.description
+          } : null;
+
           openCategoriesManagerModal(currentType, () => {
             if (typeof onDone === 'function') onDone();
-            openNewTxModal(currency, onDone, currentType);
+            openTxModal(currency, onDone, draftTx, currentType);
           });
         });
       }
@@ -753,18 +796,28 @@ function openNewTxModal(currency, onDone, initialType = 'expense') {
         const current = getStore();
         ensureFinance(current);
 
-        current.transactions.unshift({
-          id: generateId('tx'),
+        const nextData = {
           date: String(fd.get('date')),
           type: String(fd.get('type')),
           amount: Math.round(Number(fd.get('amount')) || 0),
           category: String(fd.get('category')),
           description: String(fd.get('description')).trim()
-        });
+        };
+
+        if (isEdit) {
+          current.transactions = current.transactions.map(t => (
+            t.id === existingTx.id ? { ...t, ...nextData } : t
+          ));
+        } else {
+          current.transactions.unshift({
+            id: generateId('tx'),
+            ...nextData
+          });
+        }
 
         saveStore(current);
         closeModal();
-        showToast('Movimiento guardado en el historial');
+        showToast(isEdit ? 'Movimiento actualizado' : 'Movimiento guardado en el historial');
         onDone();
       });
     }
@@ -789,7 +842,7 @@ function openCategoriesManagerModal(initialType = 'expense', onDone = null) {
       const renderManager = () => {
         const current = getStore();
         const f = ensureFinance(current);
-        const categories = f.categories[activeType];
+        const categories = sortCategories(f.categories[activeType]);
         const usageCount = new Map();
         current.transactions.forEach(tx => {
           if (tx.type !== activeType) return;
@@ -876,7 +929,7 @@ function openCategoriesManagerModal(initialType = 'expense', onDone = null) {
             return;
           }
 
-          list.push(newName);
+          fin.categories[activeType] = sortCategories([...list, newName]);
           saveStore(st);
           showToast('Categoría agregada');
           renderManager();
@@ -925,7 +978,7 @@ function openCategoriesManagerModal(initialType = 'expense', onDone = null) {
               return;
             }
 
-            fin.categories[activeType] = list.map(c => (c === oldName ? newName : c));
+            fin.categories[activeType] = sortCategories(list.map(c => (c === oldName ? newName : c)));
             st.transactions.forEach(tx => {
               if (tx.type === activeType && tx.category === oldName) {
                 tx.category = newName;
@@ -962,7 +1015,7 @@ function openCategoriesManagerModal(initialType = 'expense', onDone = null) {
           if (!window.confirm(`¿Restaurar las categorías predeterminadas de ${label}?`)) return;
           const st = getStore();
           const fin = ensureFinance(st);
-          fin.categories[activeType] = [...DEFAULT_FINANCE_CATEGORIES[activeType]];
+          fin.categories[activeType] = sortCategories(DEFAULT_FINANCE_CATEGORIES[activeType]);
           saveStore(st);
           editingCat = null;
           showToast(`Categorías de ${label} restauradas`);

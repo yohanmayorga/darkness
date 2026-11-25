@@ -1,4 +1,4 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.9.8';
+import { initRouter, getActiveRoute } from './router.js?v=6.9.11';
 import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.9.1';
 import {
   handleGoogleRedirectResult,

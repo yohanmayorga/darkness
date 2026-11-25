@@ -169,9 +169,9 @@ export function getVoiceStorageStats(entries = []) {
 
 /**
  * Inicia una sesión reutilizable de captura de audio con MediaRecorder + espectro en vivo.
- * Devuelve { stop(), cancel() }.
+ * Devuelve { pause(), resume(), isPaused(), stop(), cancel() }.
  */
-export async function startVoiceRecording({ onTick, onLevels, onComplete, onError } = {}) {
+export async function startVoiceRecording({ onTick, onLevels, onStateChange, onComplete, onError } = {}) {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
     onError?.('Tu navegador no soporta grabación de audio');
     return null;
@@ -196,12 +196,16 @@ export async function startVoiceRecording({ onTick, onLevels, onComplete, onErro
   }
 
   const chunks = [];
-  const startMs = Date.now();
+  let accumulatedMs = 0;
+  let segmentStartMs = Date.now();
+  let paused = false;
   let cancelled = false;
   let timerId = null;
   let audioCtx = null;
   let analyser = null;
   let rafId = null;
+
+  const getElapsedMs = () => (paused ? accumulatedMs : accumulatedMs + (Date.now() - segmentStartMs));
 
   const cleanup = () => {
     clearInterval(timerId);
@@ -228,10 +232,15 @@ export async function startVoiceRecording({ onTick, onLevels, onComplete, onErro
       analyser.fftSize = 64;
       src.connect(analyser);
       const data = new Uint8Array(analyser.frequencyBinCount);
+      const zeroData = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
         if (!analyser) return;
-        analyser.getByteFrequencyData(data);
-        onLevels(data);
+        if (paused) {
+          onLevels(zeroData);
+        } else {
+          analyser.getByteFrequencyData(data);
+          onLevels(data);
+        }
         rafId = requestAnimationFrame(tick);
       };
       tick();
@@ -239,7 +248,9 @@ export async function startVoiceRecording({ onTick, onLevels, onComplete, onErro
   } catch { /* fallback sin analyser */ }
 
   timerId = setInterval(() => {
-    onTick?.((Date.now() - startMs) / 1000);
+    if (!paused) {
+      onTick?.(getElapsedMs() / 1000);
+    }
   }, 250);
 
   recorder.ondataavailable = e => {
@@ -247,7 +258,7 @@ export async function startVoiceRecording({ onTick, onLevels, onComplete, onErro
   };
 
   recorder.onstop = () => {
-    const duration = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+    const duration = Math.max(1, Math.round(getElapsedMs() / 1000));
     const finalMime = recorder?.mimeType || mimeType || 'audio/webm';
     cleanup();
     if (cancelled || !chunks.length) {
@@ -261,6 +272,30 @@ export async function startVoiceRecording({ onTick, onLevels, onComplete, onErro
   recorder.start(250);
 
   return {
+    pause: () => {
+      if (paused || !recorder || recorder.state !== 'recording') return;
+      accumulatedMs += Date.now() - segmentStartMs;
+      paused = true;
+      try {
+        if (typeof recorder.pause === 'function') recorder.pause();
+      } catch { /* fallback */ }
+      onTick?.(accumulatedMs / 1000);
+      onStateChange?.('paused');
+    },
+    resume: () => {
+      if (!paused || !recorder || recorder.state === 'inactive') return;
+      paused = false;
+      segmentStartMs = Date.now();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      try {
+        if (recorder.state === 'paused' && typeof recorder.resume === 'function') recorder.resume();
+      } catch { /* fallback */ }
+      onTick?.(accumulatedMs / 1000);
+      onStateChange?.('recording');
+    },
+    isPaused: () => paused,
     stop: () => {
       if (recorder && recorder.state !== 'inactive') recorder.stop();
       else cleanup();

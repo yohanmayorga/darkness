@@ -8,10 +8,11 @@ import {
   formatDuration,
   formatBytes,
   getVoiceStorageStats
-} from '../services/voiceNotes.js?v=1.3.0';
+} from '../services/voiceNotes.js?v=1.4.0';
 import { icon } from '../components/icons.js?v=1.5.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
+import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
 import { buildUnifiedCalendarHTML } from '../components/calendar.js?v=2.6.0';
 import {
   escapeHTML,
@@ -453,134 +454,217 @@ function renderList(container) {
   });
 }
 
-function openQuickVoiceModal(listContainer) {
+async function openQuickVoiceModal(listContainer) {
   let recSession = null;
   let saving = false;
 
-  openModal({
-    title: 'AUDIO_REC // NUEVO AUDIO RÁPIDO',
-    contentHTML: `
-      <div class="qvoice-modal">
-        <div class="form-group">
-          <label class="form-label" for="qvoice-title">Nombre de la entrada (opcional)</label>
-          <input type="text" id="qvoice-title" class="form-input" placeholder="Ej. Idea nocturna, reflexión rápida..." maxlength="140" />
-        </div>
+  const existing = document.getElementById('qvoice-cyber-modal');
+  if (existing) existing.remove();
 
-        <div class="vdeck-live qvoice-live" id="qvoice-live">
-          <div class="vdeck-rec-badge mono">
-            <span class="vdeck-rec-dot"></span>
-            <span>REC</span>
-            <span id="qvoice-timer">00:00</span>
+  const backdrop = document.createElement('div');
+  backdrop.id = 'qvoice-cyber-modal';
+  backdrop.className = 'cyber-lock-backdrop';
+  backdrop.setAttribute('role', 'presentation');
+  backdrop.innerHTML = `
+    <div class="cyber-lock-frame qvoice-frame cyber-frame-wrap" role="dialog" aria-modal="true" aria-label="Grabación rápida de audio">
+      ${hudFrameOrnaments()}
+      <div class="cyber-lock-dialog">
+        <div class="cyber-lock-hazard-bar" aria-hidden="true"></div>
+        <div class="cyber-lock-hud-bar">
+          <span class="cyber-lock-code"><span class="cyber-lock-dot"></span> AUDIO_REC // NUEVO AUDIO</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="cyber-lock-tag" id="qvoice-hud-tag">REC</span>
+            <button type="button" class="btn-icon" id="qvoice-close-x" aria-label="Cerrar" style="width:28px;height:28px;">
+              ${icon('close')}
+            </button>
           </div>
-          <div class="vdeck-spectrum" id="qvoice-spectrum" aria-hidden="true">
-            ${'<span></span>'.repeat(20)}
+        </div>
+
+        <div class="qvoice-modal qvoice-cyber-body">
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" for="qvoice-entry-title">Nombre de la entrada (opcional)</label>
+            <input type="text" id="qvoice-entry-title" class="form-input" placeholder="Ej. Idea nocturna, reflexión rápida..." maxlength="140" />
+          </div>
+
+          <div class="form-group" style="margin:0;">
+            <label class="form-label" for="qvoice-audio-title">Nombre del audio (opcional)</label>
+            <input type="text" id="qvoice-audio-title" class="form-input" placeholder="Ej. Nota 1, voz en el carro..." maxlength="140" />
+          </div>
+
+          <div class="vdeck-live qvoice-live" id="qvoice-live">
+            <div class="vdeck-rec-badge mono">
+              <span class="vdeck-rec-dot"></span>
+              <span id="qvoice-badge-label">REC</span>
+              <span id="qvoice-timer">00:00</span>
+            </div>
+            <div class="vdeck-spectrum" id="qvoice-spectrum" aria-hidden="true">
+              ${'<span></span>'.repeat(20)}
+            </div>
+          </div>
+
+          <p class="qvoice-hint mono" id="qvoice-status">Iniciando micrófono…</p>
+
+          <div class="qvoice-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="qvoice-cancel">${icon('close')} Cancelar</button>
+            <button type="button" class="btn-voice-stop" id="qvoice-pause" disabled>${icon('stop')} <span>DETENER</span></button>
+            <button type="button" class="btn-voice-rec" id="qvoice-resume" hidden>${icon('mic')} <span>RETOMAR</span></button>
+            <button type="button" class="btn-voice-save" id="qvoice-save" hidden>${icon('check')} <span>GUARDAR</span></button>
           </div>
         </div>
 
-        <p class="qvoice-hint mono" id="qvoice-status">Iniciando micrófono…</p>
-
-        <div class="qvoice-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="qvoice-cancel">${icon('close')} Cancelar</button>
-          <button type="button" class="btn-voice-stop" id="qvoice-save" disabled>${icon('stop')} <span>DETENER Y GUARDAR</span></button>
-        </div>
+        <div class="cyber-lock-hazard-bar" aria-hidden="true"></div>
       </div>
-    `,
-    onMount: async (backdrop) => {
-      const titleInput = backdrop.querySelector('#qvoice-title');
-      const timerEl = backdrop.querySelector('#qvoice-timer');
-      const bars = [...backdrop.querySelectorAll('#qvoice-spectrum span')];
-      const statusEl = backdrop.querySelector('#qvoice-status');
-      const saveBtn = backdrop.querySelector('#qvoice-save');
-      const cancelBtn = backdrop.querySelector('#qvoice-cancel');
+    </div>
+  `;
 
-      const cancelAndClose = () => {
-        if (saving) return;
-        recSession?.cancel();
-        recSession = null;
-        closeModal();
+  const entryTitleInput = backdrop.querySelector('#qvoice-entry-title');
+  const audioTitleInput = backdrop.querySelector('#qvoice-audio-title');
+  const liveEl = backdrop.querySelector('#qvoice-live');
+  const hudTagEl = backdrop.querySelector('#qvoice-hud-tag');
+  const badgeLabelEl = backdrop.querySelector('#qvoice-badge-label');
+  const timerEl = backdrop.querySelector('#qvoice-timer');
+  const bars = [...backdrop.querySelectorAll('#qvoice-spectrum span')];
+  const statusEl = backdrop.querySelector('#qvoice-status');
+  const pauseBtn = backdrop.querySelector('#qvoice-pause');
+  const resumeBtn = backdrop.querySelector('#qvoice-resume');
+  const saveBtn = backdrop.querySelector('#qvoice-save');
+  const cancelBtn = backdrop.querySelector('#qvoice-cancel');
+  const closeXBtn = backdrop.querySelector('#qvoice-close-x');
+
+  const closeQuickModal = () => {
+    document.removeEventListener('keydown', onKeyDown);
+    backdrop.classList.remove('open');
+    setTimeout(() => backdrop.remove(), 170);
+  };
+
+  const cancelAndClose = () => {
+    if (saving) return;
+    recSession?.cancel();
+    recSession = null;
+    closeQuickModal();
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      cancelAndClose();
+    }
+  };
+
+  const setUIState = (state) => {
+    const isPaused = state === 'paused';
+    liveEl?.classList.toggle('is-paused', isPaused);
+    if (badgeLabelEl) badgeLabelEl.textContent = isPaused ? 'PAUSADO' : 'REC';
+    if (hudTagEl) hudTagEl.textContent = isPaused ? 'PAUSA' : 'REC';
+    pauseBtn.hidden = isPaused;
+    resumeBtn.hidden = !isPaused;
+    saveBtn.hidden = !isPaused;
+    if (isPaused) {
+      bars.forEach(b => { b.style.height = '18%'; });
+      statusEl.textContent = 'Grabación en pausa. Ponle nombre al audio/entrada y pulsa Retomar o Guardar.';
+    } else {
+      statusEl.textContent = 'Grabando… Pulsa Detener para pausar y decidir si retomar o guardar.';
+    }
+  };
+
+  closeXBtn?.addEventListener('click', cancelAndClose);
+  cancelBtn.addEventListener('click', cancelAndClose);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) cancelAndClose();
+  });
+
+  document.addEventListener('keydown', onKeyDown);
+  document.body.appendChild(backdrop);
+  requestAnimationFrame(() => backdrop.classList.add('open'));
+
+  recSession = await startVoiceRecording({
+    onTick: (secs) => {
+      if (timerEl) timerEl.textContent = formatDuration(secs);
+    },
+    onLevels: (data) => paintSpectrumBars(bars, data),
+    onStateChange: (state) => setUIState(state),
+    onError: (msg) => {
+      showToast(msg);
+      closeQuickModal();
+    },
+    onComplete: async (result) => {
+      if (!result || !saving) return;
+      const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+      const customEntryTitle = entryTitleInput.value.trim();
+      const customAudioTitle = audioTitleInput.value.trim();
+      const entryTitle = customEntryTitle || customAudioTitle || `Nota de voz · ${timeLabel}`;
+      const audioTitle = customAudioTitle || customEntryTitle || `REC ${timeLabel}`;
+      const note = {
+        id: generateId('vn'),
+        title: audioTitle,
+        duration: result.duration,
+        size: result.blob.size,
+        mimeType: result.mimeType,
+        createdAt: new Date().toISOString(),
+        storagePath: '',
+        synced: false
       };
 
-      // Si cierran el modal desde la X o haciendo clic fuera
-      backdrop.querySelector('#modal-close-btn')?.addEventListener('click', () => recSession?.cancel(), { once: true });
-      backdrop.addEventListener('click', (e) => {
-        if (e.target === backdrop) recSession?.cancel();
-      }, { once: true });
-      cancelBtn.addEventListener('click', cancelAndClose);
-
-      recSession = await startVoiceRecording({
-        onTick: (secs) => {
-          if (timerEl) timerEl.textContent = formatDuration(secs);
-        },
-        onLevels: (data) => paintSpectrumBars(bars, data),
-        onError: (msg) => {
-          showToast(msg);
-          closeModal();
-        },
-        onComplete: async (result) => {
-          if (!result || !saving) return;
-          const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-          const customTitle = titleInput.value.trim();
-          const entryTitle = customTitle || `Nota de voz · ${timeLabel}`;
-          const note = {
-            id: generateId('vn'),
-            title: customTitle || `REC ${timeLabel}`,
-            duration: result.duration,
-            size: result.blob.size,
-            mimeType: result.mimeType,
-            createdAt: new Date().toISOString(),
-            storagePath: '',
-            synced: false
-          };
-
-          statusEl.textContent = 'Subiendo audio a Firebase Storage…';
-          const cloud = await uploadVoiceNoteToCloud(note, result.blob);
-          if (!cloud.ok) {
-            saving = false;
-            showToast('No se pudo subir a la nube. Verifica tu sesión o conexión.');
-            closeModal();
-            return;
-          }
-
-          note.storagePath = cloud.storagePath;
-          note.synced = true;
-
-          const now = new Date().toISOString();
-          const store = getStore();
-          if (!Array.isArray(store.journalEntries)) store.journalEntries = [];
-          store.journalEntries.unshift({
-            id: generateId('jr'),
-            date: todayISO(),
-            title: entryTitle,
-            content: '',
-            tags: [],
-            attachments: [],
-            voiceNotes: [note],
-            createdAt: now,
-            updatedAt: now
-          });
-          saveStore(store);
-
-          saving = false;
-          closeModal();
-          showToast('Nota de voz guardada en el Diario');
-          if (document.body.contains(listContainer)) renderList(listContainer);
-        }
-      });
-
-      if (recSession && document.body.contains(backdrop)) {
-        statusEl.textContent = 'Grabando… Ponle un nombre si quieres y pulsa Detener cuando termines.';
-        saveBtn.disabled = false;
-        saveBtn.addEventListener('click', () => {
-          if (saving || !recSession) return;
-          saving = true;
-          saveBtn.disabled = true;
-          cancelBtn.disabled = true;
-          saveBtn.innerHTML = `${icon('cloud')} <span>SUBIENDO…</span>`;
-          recSession.stop();
-        });
+      statusEl.textContent = 'Subiendo audio a Firebase Storage…';
+      const cloud = await uploadVoiceNoteToCloud(note, result.blob);
+      if (!cloud.ok) {
+        saving = false;
+        showToast('No se pudo subir a la nube. Verifica tu sesión o conexión.');
+        closeQuickModal();
+        return;
       }
+
+      note.storagePath = cloud.storagePath;
+      note.synced = true;
+
+      const now = new Date().toISOString();
+      const store = getStore();
+      if (!Array.isArray(store.journalEntries)) store.journalEntries = [];
+      store.journalEntries.unshift({
+        id: generateId('jr'),
+        date: todayISO(),
+        title: entryTitle,
+        content: '',
+        tags: [],
+        attachments: [],
+        voiceNotes: [note],
+        createdAt: now,
+        updatedAt: now
+      });
+      saveStore(store);
+
+      saving = false;
+      closeQuickModal();
+      showToast('Nota de voz guardada en el Diario');
+      if (document.body.contains(listContainer)) renderList(listContainer);
     }
   });
+
+  if (recSession && document.body.contains(backdrop)) {
+    setUIState('recording');
+    pauseBtn.disabled = false;
+
+    pauseBtn.addEventListener('click', () => {
+      if (saving || !recSession) return;
+      recSession.pause();
+    });
+
+    resumeBtn.addEventListener('click', () => {
+      if (saving || !recSession) return;
+      recSession.resume();
+    });
+
+    saveBtn.addEventListener('click', () => {
+      if (saving || !recSession) return;
+      saving = true;
+      pauseBtn.disabled = true;
+      resumeBtn.disabled = true;
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      saveBtn.innerHTML = `${icon('cloud')} <span>SUBIENDO…</span>`;
+      recSession.stop();
+    });
+  }
 }
 
 /* ==========================================================================
@@ -733,6 +817,12 @@ function renderEditor(container, existing = null, presetDate = '') {
               <button type="button" class="btn-voice-stop" id="btn-voice-stop" hidden>
                 ${icon('stop')} <span>DETENER</span>
               </button>
+              <button type="button" class="btn-voice-rec" id="btn-voice-resume" hidden>
+                ${icon('mic')} <span>RETOMAR</span>
+              </button>
+              <button type="button" class="btn-voice-save" id="btn-voice-save" hidden>
+                ${icon('check')} <span>GUARDAR</span>
+              </button>
               <button type="button" class="btn btn-ghost btn-sm" id="btn-voice-cancel" hidden>
                 ${icon('close')} Cancelar
               </button>
@@ -742,11 +832,22 @@ function renderEditor(container, existing = null, presetDate = '') {
           <div class="vdeck-live" id="vdeck-live" hidden>
             <div class="vdeck-rec-badge mono">
               <span class="vdeck-rec-dot"></span>
-              <span>REC</span>
+              <span id="vdeck-badge-label">REC</span>
               <span id="vdeck-timer">00:00</span>
             </div>
             <div class="vdeck-spectrum" id="vdeck-spectrum" aria-hidden="true">
               ${'<span></span>'.repeat(20)}
+            </div>
+          </div>
+
+          <div class="vdeck-pause-meta" id="vdeck-pause-meta" hidden>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="vdeck-audio-title">Nombre del audio (opcional)</label>
+              <input type="text" id="vdeck-audio-title" class="form-input" placeholder="Ej. Idea rápida, nota 1..." maxlength="140" />
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" for="vdeck-entry-title">Nombre de la entrada (opcional)</label>
+              <input type="text" id="vdeck-entry-title" class="form-input" placeholder="Título de la entrada..." maxlength="140" />
             </div>
           </div>
 
@@ -893,9 +994,15 @@ function renderEditor(container, existing = null, presetDate = '') {
   const vListEl = container.querySelector('#vdeck-list');
   const vRecBtn = container.querySelector('#btn-voice-rec');
   const vStopBtn = container.querySelector('#btn-voice-stop');
+  const vResumeBtn = container.querySelector('#btn-voice-resume');
+  const vSaveBtn = container.querySelector('#btn-voice-save');
   const vCancelBtn = container.querySelector('#btn-voice-cancel');
   const vLiveEl = container.querySelector('#vdeck-live');
+  const vBadgeLabelEl = container.querySelector('#vdeck-badge-label');
   const vTimerEl = container.querySelector('#vdeck-timer');
+  const vPauseMetaEl = container.querySelector('#vdeck-pause-meta');
+  const vAudioTitleInput = container.querySelector('#vdeck-audio-title');
+  const vEntryTitleInput = container.querySelector('#vdeck-entry-title');
   const vSpectrumBars = [...container.querySelectorAll('#vdeck-spectrum span')];
 
   let recSession = null;
@@ -903,12 +1010,35 @@ function renderEditor(container, existing = null, presetDate = '') {
   let activePlayingId = null;
   let playbackRate = 1;
 
+  const setRecUIState = (state) => {
+    const isPaused = state === 'paused';
+    vLiveEl.classList.toggle('is-paused', isPaused);
+    if (vBadgeLabelEl) vBadgeLabelEl.textContent = isPaused ? 'PAUSADO' : 'REC';
+    vStopBtn.hidden = isPaused;
+    vResumeBtn.hidden = !isPaused;
+    vSaveBtn.hidden = !isPaused;
+    vPauseMetaEl.hidden = !isPaused;
+    if (isPaused) {
+      vSpectrumBars.forEach(b => { b.style.height = '18%'; });
+      if (vEntryTitleInput && titleInput) {
+        vEntryTitleInput.value = titleInput.value;
+      }
+    }
+  };
+
   const resetRecUI = () => {
     vSpectrumBars.forEach(b => { b.style.height = '18%'; });
+    vLiveEl.classList.remove('is-paused');
+    if (vBadgeLabelEl) vBadgeLabelEl.textContent = 'REC';
     vRecBtn.hidden = false;
     vStopBtn.hidden = true;
+    vResumeBtn.hidden = true;
+    vSaveBtn.hidden = true;
     vCancelBtn.hidden = true;
     vLiveEl.hidden = true;
+    vPauseMetaEl.hidden = true;
+    if (vAudioTitleInput) vAudioTitleInput.value = '';
+    if (vEntryTitleInput) vEntryTitleInput.value = '';
   };
 
   const stopActivePlayback = () => {
@@ -1098,17 +1228,29 @@ function renderEditor(container, existing = null, presetDate = '') {
     vTimerEl.textContent = '00:00';
     vRecBtn.hidden = true;
     vStopBtn.hidden = false;
+    vResumeBtn.hidden = true;
+    vSaveBtn.hidden = true;
     vCancelBtn.hidden = false;
     vLiveEl.hidden = false;
+    vPauseMetaEl.hidden = true;
+    if (vAudioTitleInput) vAudioTitleInput.value = '';
+    if (vEntryTitleInput) vEntryTitleInput.value = titleInput ? titleInput.value : '';
+    setRecUIState('recording');
 
     recSession = await startVoiceRecording({
       onTick: (secs) => { vTimerEl.textContent = formatDuration(secs); },
       onLevels: (data) => paintSpectrumBars(vSpectrumBars, data),
+      onStateChange: (state) => setRecUIState(state),
       onError: (msg) => {
         resetRecUI();
         showToast(msg);
       },
       onComplete: async (result) => {
+        const customAudioTitle = vAudioTitleInput ? vAudioTitleInput.value.trim() : '';
+        const customEntryTitle = vEntryTitleInput ? vEntryTitleInput.value.trim() : '';
+        if (customEntryTitle && titleInput) {
+          titleInput.value = customEntryTitle;
+        }
         recSession = null;
         resetRecUI();
         if (!result) return;
@@ -1116,7 +1258,7 @@ function renderEditor(container, existing = null, presetDate = '') {
         const timeLabel = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         const note = {
           id: generateId('vn'),
-          title: `REC ${timeLabel}`,
+          title: customAudioTitle || `REC ${timeLabel}`,
           duration: result.duration,
           size: result.blob.size,
           mimeType: result.mimeType,
@@ -1148,6 +1290,14 @@ function renderEditor(container, existing = null, presetDate = '') {
   });
 
   vStopBtn.addEventListener('click', () => {
+    recSession?.pause();
+  });
+
+  vResumeBtn.addEventListener('click', () => {
+    recSession?.resume();
+  });
+
+  vSaveBtn.addEventListener('click', () => {
     recSession?.stop();
   });
 

@@ -14,6 +14,7 @@ import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
 import { ALL_DAYS, normalizeHabit } from '../utils/habits.js?v=3.3.0';
+import { asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
 
 const calState = { year: null, month: null, selectedDate: '' };
 
@@ -286,6 +287,7 @@ export function renderSettings(container) {
           `;
         })()}
       </section>
+      ${asideCyberDecal({ code: 'SYS.08', label: 'SYSTEM KERNEL', tag: 'CONFIG // ROOT' })}
     </aside>
   `;
 

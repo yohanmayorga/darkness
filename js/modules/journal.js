@@ -12,7 +12,7 @@ import {
 import { icon } from '../components/icons.js?v=1.5.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
-import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
+import { hudFrameOrnaments, asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
 import { buildUnifiedCalendarHTML } from '../components/calendar.js?v=2.6.0';
 import {
   escapeHTML,
@@ -272,6 +272,7 @@ function renderList(container) {
             <div class="jstat"><div class="jstat-value">${totalWords.toLocaleString('es-ES')}</div><div class="jstat-label">Palabras</div></div>
           </div>
         </section>
+        ${asideCyberDecal({ code: 'SYS.05', label: 'NEURAL LOG', tag: 'MEMORY // ENC' })}
       </aside>
     </div>
   `;

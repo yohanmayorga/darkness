@@ -3,7 +3,7 @@ import { icon } from '../components/icons.js?v=3.3.0';
 import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { escapeHTML } from '../utils/text.js?v=1.4.0';
-import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
+import { hudFrameOrnaments, asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
 import { attachChartZoom, formatZoomLabel } from '../utils/chartZoom.js?v=1.0.0';
 import {
   addDays, parseISO, isValidISO,
@@ -96,6 +96,7 @@ export function renderHabits(container) {
       <aside class="habit-aside">
         <section class="card habit-calendar" aria-label="Calendario de cumplimiento">${buildCalendar(habits, today)}</section>
         <section class="card habit-summary-card" aria-label="Resumen general de hábitos">${buildHabitsSummary(habits, today)}</section>
+        ${asideCyberDecal({ code: 'SYS.01', label: 'HABIT PROTOCOL', tag: 'STREAK // SYNC' })}
       </aside>
     </div>
   `;

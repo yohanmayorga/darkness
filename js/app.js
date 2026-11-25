@@ -1,4 +1,4 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.9.11';
+import { initRouter, getActiveRoute } from './router.js?v=6.9.14';
 import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.9.1';
 import {
   handleGoogleRedirectResult,
@@ -21,7 +21,7 @@ const NAV_ITEMS = [
   { path: '/dashboard', label: 'Dashboard', shortLabel: 'Inicio', icon: 'dashboard' },
   { path: '/habits', label: 'Hábitos', shortLabel: 'Hábitos', icon: 'habits' },
   { path: '/tasks', label: 'Tareas', shortLabel: 'Tareas', icon: 'list' },
-  { path: '/body', label: 'Cuerpo & Peso', shortLabel: 'Cuerpo', icon: 'body' },
+  { path: '/body', label: 'Cuerpo', shortLabel: 'Cuerpo', icon: 'body' },
   { path: '/reading', label: 'Lectura', shortLabel: 'Lectura', icon: 'reading' },
   { path: '/journal', label: 'Diario', shortLabel: 'Diario', icon: 'journal' },
   { path: '/finance', label: 'Finanzas', shortLabel: 'Finanzas', icon: 'finance' },

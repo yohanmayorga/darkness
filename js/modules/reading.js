@@ -4,6 +4,7 @@ import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
 import { formatDateDMY, escapeHTML } from '../utils/text.js?v=4.3.0';
+import { asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
 
 let activeFilter = 'Todos';
 let activeModality = 'Todos';
@@ -217,6 +218,7 @@ export function renderReading(container) {
           Tienes <strong class="mono">${readingCount}</strong> libro(s) en curso y <strong class="mono">${finishedCount}</strong> terminado(s) en tu biblioteca.
         </p>
       </section>
+      ${asideCyberDecal({ code: 'SYS.04', label: 'ARCHIVE INDEX', tag: 'DATA // READ' })}
     </aside>
   `;
 

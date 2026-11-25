@@ -1065,13 +1065,107 @@
   bottom: 0;
   width: var(--memento-sidebar-width);
   background-color: var(--bg-surface);
+  background-image: var(--cyber-aside-rail);
+  background-position: 0 0;
+  background-size: 6px 100%;
+  background-repeat: no-repeat;
   border-left: 1px solid var(--border-subtle);
-  padding: 16px 14px;
+  padding: 16px 14px 16px 20px;
   overflow-y: auto;
   z-index: 38;
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.aside-cyber-decal {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex-shrink: 0;
+  user-select: none;
+  opacity: 0.92;
+}
+
+.aside-cyber-chassis {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.aside-cyber-hazard-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border: 1px solid var(--hud-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface-elevated);
+}
+
+.aside-cyber-globe {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--text-primary);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.aside-cyber-stripes-svg {
+  flex: 1;
+  min-width: 0;
+  height: 14px;
+  display: block;
+  opacity: 0.9;
+}
+
+.aside-cyber-footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.aside-cyber-quote {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.aside-cyber-glyphs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--cyber-hud-armor);
+}
+
+.aside-cyber-serial {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 1px 5px;
+  background-color: var(--cyber-yellow-bg);
+  color: var(--cyber-yellow);
+  border: 1px solid var(--cyber-yellow-border);
+  border-radius: var(--radius-sm);
+}
+
+.aside-cyber-subcopy {
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  line-height: 1.35;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 
 .body-aside > .card,
@@ -1138,6 +1232,8 @@
     position: static;
     width: 100%;
     background: transparent;
+    background-image: none;
+    box-shadow: none;
     border-left: none;
     padding: 0;
     margin-top: 16px;

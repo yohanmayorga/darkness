@@ -4,6 +4,7 @@ import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
 import { formatDateDMY } from '../utils/text.js?v=4.3.0';
+import { asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
 
 let statusFilter = 'all';
 const calState = { year: null, month: null, selectedDate: '' };
@@ -283,6 +284,7 @@ export function renderTasks(container) {
           Tienes <strong class="mono">${globalStats.pending}</strong> pendiente(s), <strong class="mono">${globalStats.inProgress}</strong> en curso y <strong class="mono">${globalStats.done}</strong> completada(s) (<strong class="mono">${globalStats.donePct}%</strong>).
         </p>
       </section>
+      ${asideCyberDecal({ code: 'SYS.02', label: 'TASK MATRIX', tag: 'QUEUE // EXEC' })}
     </aside>
   `;
 

@@ -252,8 +252,12 @@
   bottom: 0;
   width: var(--memento-sidebar-width);
   background-color: var(--bg-surface);
+  background-image: var(--cyber-aside-rail);
+  background-position: 0 0;
+  background-size: 6px 100%;
+  background-repeat: no-repeat;
   border-left: 1px solid var(--border-subtle);
-  padding: 16px 14px;
+  padding: 16px 14px 16px 20px;
   overflow-y: auto;
   z-index: 38;
   display: flex;
@@ -736,6 +740,8 @@
     position: static;
     width: 100%;
     background: transparent;
+    background-image: none;
+    box-shadow: none;
     border-left: none;
     padding: 0;
     overflow-y: visible;

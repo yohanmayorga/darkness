@@ -10,7 +10,7 @@ import {
 } from '../services/f1.js?v=1.1.0';
 import { todayISO } from '../services/db.js?v=6.9.0';
 import { icon } from '../components/icons.js?v=3.4.0';
-import { hudFrameOrnaments } from '../components/hudFrame.js?v=1.0.0';
+import { hudFrameOrnaments, asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
 import { renderF1WorldMapHTML, bindF1WorldMap } from '../components/f1Map.js?v=2.2.0';
 import { fetchCircuitTrackSvgData, renderCircuitInfoHTML } from '../components/f1Circuits.js?v=1.1.0';
 import { getTeamMeta } from '../components/f1Teams.js?v=1.0.0';
@@ -1543,6 +1543,7 @@ function paintView(container) {
         <section class="card" id="f1-aside-summary">
           ${renderAsideRaceSummaryHTML(state.data)}
         </section>
+        ${asideCyberDecal({ code: 'SYS.07', label: 'TELEMETRY HUD', tag: 'RACE // GRID' })}
       </aside>
     ` : ''}
   `;

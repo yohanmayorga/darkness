@@ -83,3 +83,93 @@ export function hudFrameOrnaments() {
     </svg>
   `;
 }
+
+/**
+ * Bloque gráfico Cyberpunk / Streetwear para la parte inferior de las columnas laterales
+ * de los módulos (excluyendo Dashboard). Inspirado en estética HUD monocromática.
+ */
+export function asideCyberDecal({
+  code = 'SYS.00',
+  label = 'DARKNESS // OS',
+  tag = 'NODE // ACTIVE'
+} = {}) {
+  return `
+    <div class="aside-cyber-decal" aria-hidden="true">
+      <!-- Chasis HUD asimétrico con muesca inferior y bloques diagonales -->
+      <svg class="aside-cyber-chassis" viewBox="0 0 264 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Marco exterior desplazado -->
+        <path d="M96 4 H252 Q260 4 260 12 V96 Q260 104 252 104 H126 L114 118" stroke="var(--hud-border-strong)" stroke-width="1.4"/>
+        <!-- Chasis principal con chaflán superior izquierdo y muesca inferior -->
+        <path d="M40 12 H242 Q250 12 250 20 V88 Q250 96 242 96 H128 L114 114 Q110 119 102 119 H14 Q6 119 6 111 V42 Q6 36 11 31 L29 15 Q34 12 40 12 Z" fill="var(--bg-surface-elevated)" stroke="var(--text-primary)" stroke-width="1.6"/>
+
+        <!-- Cabecera superior del chasis -->
+        <text x="26" y="27" fill="var(--text-primary)" font-family="var(--font-display)" font-size="9.5" font-weight="700" letter-spacing="1.4">${label}</text>
+        <line x1="138" y1="24" x2="178" y2="24" stroke="var(--hud-border-strong)" stroke-width="1.2"/>
+        <text x="240" y="27" text-anchor="end" fill="var(--text-primary)" font-family="var(--font-display)" font-size="9" font-weight="700" letter-spacing="1">${code}</text>
+
+        <!-- Micro-texto técnico -->
+        <text x="26" y="37" fill="var(--text-muted)" font-family="var(--font-mono)" font-size="4.6" letter-spacing="0.6">SYSTEM TELEMETRY // INFINITE POTENTIAL</text>
+        <text x="26" y="43.5" fill="var(--text-muted)" font-family="var(--font-mono)" font-size="4.6" letter-spacing="0.6">PROTOCOL: ${tag} · DRK-2077</text>
+
+        <!-- Banda central con bloques inclinados de alto contraste -->
+        <rect x="7" y="49" width="242" height="20" fill="var(--bg-canvas)"/>
+        <polygon points="7,49 32,49 25,69 7,69" fill="var(--text-primary)"/>
+        <polygon points="36,49 48,49 41,69 29,69" fill="var(--text-primary)"/>
+        <polygon points="52,49 64,49 57,69 45,69" fill="var(--text-primary)"/>
+        <polygon points="68,49 80,49 73,69 61,69" fill="var(--text-primary)"/>
+        <polygon points="84,49 96,49 89,69 77,69" fill="var(--text-primary)"/>
+        <polygon points="222,49 249,49 249,69 229,69" fill="var(--text-primary)"/>
+
+        <!-- Bloque inferior izquierdo: tipografía apilada + metadata -->
+        <text x="15" y="88" fill="var(--text-primary)" font-family="var(--font-display)" font-size="17" font-weight="700" letter-spacing="1.2">FUT-</text>
+        <text x="15" y="105" fill="var(--text-primary)" font-family="var(--font-display)" font-size="17" font-weight="700" letter-spacing="1.2">URE</text>
+        <text x="15" y="114" fill="var(--text-muted)" font-family="var(--font-mono)" font-size="5.2" letter-spacing="1.2">◈ WORLDWIDE</text>
+        <line x1="66" y1="112" x2="106" y2="112" stroke="var(--hud-border-strong)" stroke-width="1"/>
+
+        <!-- Tres marcas X contorneadas a la derecha -->
+        <g stroke="var(--text-primary)" stroke-width="1.5" fill="none" stroke-linejoin="round">
+          <path d="M174 75 L179 80 L184 75 L187 78 L182 83 L187 88 L184 91 L179 86 L174 91 L171 88 L176 83 L171 78 Z"/>
+          <path d="M198 75 L203 80 L208 75 L211 78 L206 83 L211 88 L208 91 L203 86 L198 91 L195 88 L200 83 L195 78 Z"/>
+          <path d="M222 75 L227 80 L232 75 L235 78 L230 83 L235 88 L232 91 L227 86 L222 91 L219 88 L224 83 L219 78 Z"/>
+        </g>
+
+        <!-- Cuatro puntos de estado en la muesca inferior -->
+        <circle cx="136" cy="111" r="2.8" fill="var(--cyber-hud-armor)"/>
+        <circle cx="147" cy="111" r="2.8" fill="var(--text-primary)"/>
+        <circle cx="158" cy="111" r="2.8" fill="var(--text-primary)"/>
+        <circle cx="169" cy="111" r="2.8" fill="var(--text-primary)"/>
+      </svg>
+
+      <!-- Barra de franjas diagonales + globo wireframe -->
+      <div class="aside-cyber-hazard-row">
+        <span class="aside-cyber-globe" title="WORLDWIDE">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="9"/>
+            <ellipse cx="12" cy="12" rx="4.2" ry="9"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <path d="M4.8 7.5 Q12 9.5 19.2 7.5"/>
+            <path d="M4.8 16.5 Q12 14.5 19.2 16.5"/>
+          </svg>
+        </span>
+        <svg class="aside-cyber-stripes-svg" viewBox="0 0 220 14" preserveAspectRatio="xMinYMid slice" aria-hidden="true">
+          ${Array.from({ length: 22 }, (_, i) => {
+            const x = i * 11;
+            return `<polygon points="${x + 6},0 ${x + 12},0 ${x + 6},14 ${x},14" fill="var(--text-primary)"/>`;
+          }).join('')}
+        </svg>
+      </div>
+
+      <!-- Pie tipográfico estilo streetwear/cyberpunk -->
+      <div class="aside-cyber-footer-meta">
+        <div class="aside-cyber-quote">"ALL AROUND US"</div>
+        <div class="aside-cyber-glyphs">
+          <svg viewBox="0 0 20 20" width="11" height="11" fill="currentColor">
+            <path d="M10 0 L12.2 7.8 L20 10 L12.2 12.2 L10 20 L7.8 12.2 L0 10 L7.8 7.8 Z"/>
+          </svg>
+          <span class="aside-cyber-serial">DRK·NX</span>
+        </div>
+      </div>
+      <div class="aside-cyber-subcopy">THE UNKNOWN IS ALSO THE REALM OF INFINITE POTENTIAL.</div>
+    </div>
+  `;
+}

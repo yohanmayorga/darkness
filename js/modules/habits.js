@@ -61,32 +61,39 @@ export function renderHabits(container) {
       </div>
     </header>
 
-    <section class="card habit-chart-card cyber-frame-wrap">
-      ${hudFrameOrnaments()}
-      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
-        <h2 class="card-title">${icon('dashboard')} Evolución del cumplimiento</h2>
-        <div class="habit-chart-controls">
-          ${habits.length ? `
-            <select id="select-habit-filter" class="habit-filter-select" aria-label="Filtrar gráfica por hábito">
-              <option value="all"${!selectedHabit ? ' selected' : ''}>Todos los hábitos</option>
-              ${habits.map(h => `<option value="${esc(h.id)}"${state.habitFilter === h.id ? ' selected' : ''}>${esc(h.name)}</option>`).join('')}
-            </select>
-          ` : ''}
-          <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-out" title="Alejar zoom">−</button>
-            <button type="button" class="btn btn-secondary btn-sm mono" id="btn-hc-zoom-reset" title="Restablecer zoom">${formatZoomLabel(state.zoom)}</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-in" title="Acercar zoom">+</button>
-          </div>
-          <div class="habit-range" role="group" aria-label="Rango de la gráfica">
-            ${RANGES.map(r => `
-              <button type="button" class="habit-range-btn ${state.range === r.key ? 'active' : ''}" data-range="${r.key}">${r.label}</button>
-            `).join('')}
-          </div>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-hc-reset-filters" title="Restablecer hábito, rango y zoom">Borrar filtros</button>
-        </div>
+    <section class="habit-visual-grid">
+      <div class="card habit-daily-cyber-card cyber-frame-wrap">
+        ${hudFrameOrnaments()}
+        ${buildDailyCyberProgress(habits, today)}
       </div>
-      ${buildChart(chartHabits, today, selectedHabit)}
-      ${buildAdvice(habits, today, selectedHabit)}
+
+      <div class="card habit-chart-card cyber-frame-wrap">
+        ${hudFrameOrnaments()}
+        <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+          <h2 class="card-title">${icon('dashboard')} Evolución del cumplimiento</h2>
+          <div class="habit-chart-controls">
+            ${habits.length ? `
+              <select id="select-habit-filter" class="habit-filter-select" aria-label="Filtrar gráfica por hábito">
+                <option value="all"${!selectedHabit ? ' selected' : ''}>Todos los hábitos</option>
+                ${habits.map(h => `<option value="${esc(h.id)}"${state.habitFilter === h.id ? ' selected' : ''}>${esc(h.name)}</option>`).join('')}
+              </select>
+            ` : ''}
+            <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-out" title="Alejar zoom">−</button>
+              <button type="button" class="btn btn-secondary btn-sm mono" id="btn-hc-zoom-reset" title="Restablecer zoom">${formatZoomLabel(state.zoom)}</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-hc-zoom-in" title="Acercar zoom">+</button>
+            </div>
+            <div class="habit-range" role="group" aria-label="Rango de la gráfica">
+              ${RANGES.map(r => `
+                <button type="button" class="habit-range-btn ${state.range === r.key ? 'active' : ''}" data-range="${r.key}">${r.label}</button>
+              `).join('')}
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-hc-reset-filters" title="Restablecer hábito, rango y zoom">Borrar filtros</button>
+          </div>
+        </div>
+        ${buildChart(chartHabits, today, selectedHabit)}
+        ${buildAdvice(habits, today, selectedHabit)}
+      </div>
     </section>
 
     ${buildKpis(habits, today)}
@@ -220,6 +227,260 @@ function buildAdvice(habits, today, selectedHabit = null) {
     <div class="habit-advice">
       <span class="habit-advice-label mono">${label}</span>
       ${tips.map(t => `<p>${t}</p>`).join('')}
+    </div>
+  `;
+}
+
+/* ==========================================================================
+   Reactor Cyberpunk de Progreso Diario (1/4 derecho junto a la gráfica)
+   ========================================================================== */
+function buildDailyCyberProgress(habits, today) {
+  const iso = state.selectedDate || today;
+  const isToday = iso === today;
+  const stats = dayStats(habits, iso);
+  const scheduled = habits.filter(h => isScheduled(h, iso));
+  const doneCount = stats.done;
+  const totalCount = stats.total;
+  const pendingCount = Math.max(0, totalCount - doneCount);
+  const ratio = stats.pct ?? 0;
+  const pctNum = totalCount ? Math.round(ratio * 100) : null;
+
+  let tone = 'idle';
+  let statusCode = 'STANDBY';
+  let strokeVar = 'var(--hud-accent)';
+  if (totalCount > 0) {
+    if (ratio >= 1) {
+      tone = 'max';
+      statusCode = 'SYNC // MAX';
+      strokeVar = 'var(--status-success)';
+    } else if (ratio >= 0.8) {
+      tone = 'high';
+      statusCode = 'OPTIMAL';
+      strokeVar = 'var(--status-success)';
+    } else if (ratio >= 0.4) {
+      tone = 'mid';
+      statusCode = 'ACTIVE';
+      strokeVar = 'var(--cyber-yellow)';
+    } else {
+      tone = 'low';
+      statusCode = 'LOW PWR';
+      strokeVar = 'var(--status-danger)';
+    }
+  }
+
+  // Ordenar completados primero para que los segmentos iluminados avancen en sentido horario
+  const ordered = [...scheduled].sort((a, b) => Number(isDone(b, iso)) - Number(isDone(a, iso)));
+  const cx = 140;
+  const cy = 140;
+
+  // 12 marcas radiales en el anillo exterior
+  const outerTicks = Array.from({ length: 12 }, (_, idx) => {
+    const deg = idx * 30;
+    const major = idx % 3 === 0;
+    const y1 = major ? 24 : 27;
+    const y2 = 34;
+    return `<line x1="${cx}" y1="${y1}" x2="${cx}" y2="${y2}" stroke="${major ? 'var(--hud-accent)' : 'var(--hud-border-strong)'}" stroke-width="${major ? '1.6' : '1'}" transform="rotate(${deg} ${cx} ${cy})" />`;
+  }).join('');
+
+  // Anillo segmentado: 1 segmento por cada hábito programado del día
+  const segR = 82;
+  const segC = 2 * Math.PI * segR;
+  const segmentsSVG = ordered.length
+    ? ordered.map((h, i) => {
+        const done = isDone(h, iso);
+        const slot = segC / ordered.length;
+        const gap = ordered.length === 1 ? 0 : Math.min(6, slot * 0.22);
+        const dash = Math.max(2, slot - gap);
+        const angle = -90 + (i * 360) / ordered.length;
+        return `
+          <circle
+            class="hcyber-seg ${done ? 'is-done' : 'is-pending'}"
+            cx="${cx}" cy="${cy}" r="${segR}"
+            fill="none"
+            stroke="${done ? strokeVar : 'var(--hud-border)'}"
+            stroke-width="${done ? '6.5' : '4.5'}"
+            stroke-dasharray="${dash.toFixed(2)} ${(segC - dash).toFixed(2)}"
+            transform="rotate(${angle.toFixed(2)} ${cx} ${cy})"
+            ${done ? 'filter="url(#hcyber-glow)"' : ''}
+          >
+            <title>${esc(h.name)} · ${done ? 'Completado' : 'Pendiente'}</title>
+          </circle>
+        `;
+      }).join('')
+    : `<circle cx="${cx}" cy="${cy}" r="${segR}" fill="none" stroke="var(--hud-border-subtle)" stroke-width="4" stroke-dasharray="8 6" />`;
+
+  // Arco interno de progreso continuo
+  const innerR = 68;
+  const innerC = 2 * Math.PI * innerR;
+  const innerFill = innerC * ratio;
+
+  // Hexágono interior
+  const hexR = 52;
+  const hexPoints = Array.from({ length: 6 }, (_, i) => {
+    const a = ((i * 60 - 90) * Math.PI) / 180;
+    return `${(cx + hexR * Math.cos(a)).toFixed(1)},${(cy + hexR * Math.sin(a)).toFixed(1)}`;
+  }).join(' ');
+
+  // Telemetría inferior: barra de carga, pulso visual de 7 días y comparativa vs ayer
+  const last7Series = rangeSeries(habits, addDays(iso, -6), iso);
+  const prevStats = dayStats(habits, addDays(iso, -1));
+  const deltaYesterday = stats.pct !== null && prevStats.pct !== null
+    ? Math.round((stats.pct - prevStats.pct) * 100)
+    : null;
+  const deltaLabel = deltaYesterday === null
+    ? '--'
+    : deltaYesterday > 0
+      ? `+${deltaYesterday}%`
+      : `${deltaYesterday}%`;
+  const deltaCls = deltaYesterday === null
+    ? ''
+    : deltaYesterday > 0
+      ? 'is-up'
+      : deltaYesterday < 0
+        ? 'is-down'
+        : '';
+  const chargeCells = 10;
+  const litCells = totalCount ? Math.round(ratio * chargeCells) : 0;
+
+  return `
+    <div class="card-header">
+      <h2 class="card-title">${icon('habits')} ${isToday ? 'Progreso Hoy' : `Día ${formatShort(iso)}`}</h2>
+      <span class="cyber-tag">${isToday ? 'SYNC.24H' : 'LOG.DAY'}</span>
+    </div>
+    <div class="habit-cyber-stage is-tone-${tone}" style="--hcyber-color:${strokeVar};">
+      <div class="hcyber-scanline" aria-hidden="true"></div>
+      <svg class="hcyber-svg" viewBox="0 0 280 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Progreso diario de hábitos: ${pctNum !== null ? `${pctNum}% (${doneCount} de ${totalCount})` : 'sin hábitos programados'}">
+        <defs>
+          <filter id="hcyber-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2.4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <linearGradient id="hcyber-radar-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="${strokeVar}" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="${strokeVar}" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+
+        <!-- Telemetría de esquinas -->
+        <text x="8" y="14" class="hcyber-micro">CORE // HAB.01</text>
+        <g>
+          <circle cx="268" cy="11" r="2.8" fill="${strokeVar}" class="hcyber-led-pulse" />
+          <text x="260" y="14" text-anchor="end" class="hcyber-micro">${statusCode}</text>
+        </g>
+        <text x="8" y="272" class="hcyber-micro">DONE: ${String(doneCount).padStart(2, '0')}/${String(totalCount).padStart(2, '0')}</text>
+        <text x="272" y="272" text-anchor="end" class="hcyber-micro">PEND: ${String(pendingCount).padStart(2, '0')}</text>
+
+        <!-- Esquineros tácticos del visor -->
+        <g stroke="var(--hud-border-strong)" stroke-width="1" fill="none" opacity="0.65">
+          <polyline points="8,24 8,36 16,36" />
+          <polyline points="272,24 272,36 264,36" />
+          <polyline points="8,256 8,244 16,244" />
+          <polyline points="272,256 272,244 264,244" />
+        </g>
+
+        <!-- Anillo exterior giratorio (sentido horario) -->
+        <g class="hcyber-ring-outer">
+          <circle cx="${cx}" cy="${cy}" r="110" fill="none" stroke="var(--hud-border)" stroke-width="1" stroke-dasharray="18 8 4 8" />
+          <circle cx="${cx}" cy="${cy}" r="103" fill="none" stroke="var(--hud-border-subtle)" stroke-width="0.8" stroke-dasharray="2 5" />
+          ${outerTicks}
+        </g>
+
+        <!-- Anillo medio contrarrotatorio con nodos orbitales -->
+        <g class="hcyber-ring-mid">
+          <circle cx="${cx}" cy="${cy}" r="94" fill="none" stroke="var(--hud-border-strong)" stroke-width="1.2" stroke-dasharray="34 16 8 16" opacity="0.8" />
+          <circle cx="${cx}" cy="46" r="3" fill="${strokeVar}" filter="url(#hcyber-glow)" />
+          <circle cx="${cx}" cy="234" r="2.4" fill="var(--hud-accent)" opacity="0.85" />
+        </g>
+
+        <!-- Haz de escaneo radar -->
+        <g class="hcyber-radar-sweep">
+          <path d="M ${cx} ${cy} L ${cx} 74 A 66 66 0 0 1 186 93 Z" fill="url(#hcyber-radar-grad)" />
+          <line x1="${cx}" y1="${cy}" x2="${cx}" y2="74" stroke="${strokeVar}" stroke-width="1.1" opacity="0.65" />
+        </g>
+
+        <!-- Anillo segmentado por hábito -->
+        ${segmentsSVG}
+
+        <!-- Arco interno de progreso continuo -->
+        <circle cx="${cx}" cy="${cy}" r="${innerR}" fill="none" stroke="var(--hud-border-subtle)" stroke-width="2.5" />
+        ${totalCount > 0 ? `
+          <circle
+            class="hcyber-progress-arc"
+            cx="${cx}" cy="${cy}" r="${innerR}"
+            fill="none"
+            stroke="${strokeVar}"
+            stroke-width="3.5"
+            stroke-linecap="round"
+            stroke-dasharray="${innerFill.toFixed(2)} ${innerC.toFixed(2)}"
+            transform="rotate(-90 ${cx} ${cy})"
+            filter="url(#hcyber-glow)"
+          />
+        ` : ''}
+
+        <!-- Hexágono giratorio + halo pulsante del núcleo -->
+        <g class="hcyber-hex-spin">
+          <polygon points="${hexPoints}" fill="none" stroke="var(--hud-border-strong)" stroke-width="1" stroke-dasharray="6 4" opacity="0.7" />
+        </g>
+        <circle cx="${cx}" cy="${cy}" r="45" fill="var(--hud-bg-elevated)" stroke="${strokeVar}" stroke-width="1" opacity="0.22" class="hcyber-core-pulse" />
+        <circle cx="${cx}" cy="${cy}" r="43" fill="var(--hud-bg-elevated)" stroke="var(--hud-border-strong)" stroke-width="1" />
+
+        <!-- Lectura numérica central -->
+        <text x="${cx}" y="${cy + 3}" text-anchor="middle" class="hcyber-pct-val">${pctNum !== null ? `${pctNum}%` : '--'}</text>
+        <text x="${cx}" y="${cy + 20}" text-anchor="middle" class="hcyber-pct-sub">${totalCount ? `${doneCount}/${totalCount} OK` : 'SIN META'}</text>
+      </svg>
+
+      <!-- Módulo inferior: carga SYNC, espectro 7D y comparativa vs ayer -->
+      <div class="hcyber-telemetry">
+        <div class="hcyber-power-row" aria-hidden="true">
+          <span class="hcyber-power-label mono">SYNC</span>
+          <div class="hcyber-power-cells">
+            ${Array.from({ length: chargeCells }, (_, idx) => {
+              const isLit = idx < litCells;
+              const isLead = isLit && idx === litCells - 1 && litCells < chargeCells;
+              return `<span class="hcyber-cell${isLit ? ' is-lit' : ''}${isLead ? ' is-lead' : ''}"></span>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="hcyber-pulse-box">
+          <div class="hcyber-pulse-head mono">
+            <span>PULSO 7D</span>
+            <span class="hcyber-delta ${deltaCls}">VS AYER: <strong>${deltaLabel}</strong></span>
+          </div>
+          <div class="hcyber-pulse-bars" role="img" aria-label="Cumplimiento de los últimos 7 días">
+            ${last7Series.map(d => {
+              const p = d.pct === null ? 0 : Math.round(d.pct * 100);
+              const isCurrent = d.iso === iso;
+              const letter = DAY_LETTER[parseISO(d.iso).getDay()] || '·';
+              const lvl = d.pct === null ? 'none' : d.pct >= 0.8 ? 'high' : d.pct >= 0.4 ? 'mid' : 'low';
+              return `
+                <div class="hcyber-pbar-col${isCurrent ? ' is-current' : ''}" title="${formatShort(d.iso)} · ${d.pct === null ? 'Sin hábitos' : `${d.done}/${d.total} (${p}%)`}">
+                  <div class="hcyber-pbar-track">
+                    <span class="hcyber-pbar-fill is-${lvl}" style="height:${d.pct === null ? 0 : Math.max(p, 8)}%;"></span>
+                  </div>
+                  <span class="hcyber-pbar-day mono">${letter}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="hcyber-footer">
+        <div class="hcyber-eq" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <span class="hcyber-footer-status mono">
+          ${totalCount === 0
+            ? 'SIN HÁBITOS'
+            : pendingCount === 0
+              ? 'PROTOCOLO 100%'
+              : `${pendingCount} ${pendingCount === 1 ? 'PENDIENTE' : 'PENDIENTES'}`}
+        </span>
+      </div>
     </div>
   `;
 }

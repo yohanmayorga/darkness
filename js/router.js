@@ -1,5 +1,5 @@
 import { renderDashboard } from './modules/dashboard.js?v=6.9.5';
-import { renderHabits } from './modules/habits.js?v=6.9.8';
+import { renderHabits } from './modules/habits.js?v=6.9.11';
 import { renderTasks } from './modules/tasks.js?v=6.9.5';
 import { renderBody } from './modules/body.js?v=6.9.8';
 import { renderReading } from './modules/reading.js?v=6.9.5';

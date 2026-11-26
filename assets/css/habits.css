@@ -2,9 +2,424 @@
    Módulo de Hábitos — panel de control
    ========================================================================== */
 
-/* ---------- Gráfica de evolución ---------- */
-.habit-chart-card {
+/* ---------- Layout superior: Reactor Cyberpunk diario (1/4 izq) + Gráfica principal (3/4 der) ---------- */
+.habit-visual-grid {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(0, 3fr);
+  gap: 16px;
   margin-bottom: 18px;
+  align-items: stretch;
+}
+
+.habit-chart-card,
+.habit-daily-cyber-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.habit-cyber-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 245px;
+  padding: 8px 6px 10px;
+  background-image: var(--cyber-grid);
+  background-size: 16px 16px;
+  background-color: var(--hud-bg-elevated);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.hcyber-scanline {
+  position: absolute;
+  inset: -40% 0 auto 0;
+  height: 36%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--hud-accent-subtle) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: hcyberScanSweep 4.8s linear infinite;
+}
+
+.hcyber-svg {
+  width: 100%;
+  flex: 1 1 auto;
+  max-height: 235px;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+/* Telemetría inferior para aprovechar el alto completo */
+.hcyber-telemetry {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.hcyber-power-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hcyber-power-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  color: var(--hud-text-muted);
+}
+
+.hcyber-power-cells {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+}
+
+.hcyber-cell {
+  height: 6px;
+  border-radius: 1px;
+  background-color: var(--hud-border-subtle);
+  border: 1px solid var(--hud-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.hcyber-cell.is-lit {
+  background-color: var(--hcyber-color, var(--hud-accent));
+  border-color: var(--hcyber-color, var(--hud-accent));
+}
+
+.hcyber-cell.is-lead {
+  animation: hcyberLedBlink 1.1s ease-in-out infinite;
+}
+
+.hcyber-pulse-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 9px;
+  background-color: var(--hud-bg);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.hcyber-pulse-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.58rem;
+  letter-spacing: 0.09em;
+  color: var(--hud-text-muted);
+}
+
+.hcyber-delta strong {
+  color: var(--hud-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hcyber-delta.is-up strong {
+  color: var(--status-success);
+}
+
+.hcyber-delta.is-down strong {
+  color: var(--status-danger);
+}
+
+.hcyber-pulse-bars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  align-items: end;
+  padding: 6px 2px 2px;
+  position: relative;
+  background-image: linear-gradient(
+    to bottom,
+    var(--hud-border-subtle) 1px,
+    transparent 1px
+  );
+  background-size: 100% 21px;
+  background-position: 0 6px;
+}
+
+.hcyber-pbar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.hcyber-pbar-track {
+  width: 9px;
+  height: 42px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  background: repeating-linear-gradient(
+    to top,
+    var(--hud-border) 0 3px,
+    transparent 3px 5px
+  );
+  border: none;
+  border-bottom: 1px solid var(--hud-border-strong);
+  border-radius: 0;
+  position: relative;
+}
+
+.hcyber-pbar-col.is-current .hcyber-pbar-track {
+  border-bottom-color: var(--hcyber-color, var(--hud-accent));
+  border-bottom-width: 2px;
+}
+
+.hcyber-pbar-fill {
+  width: 100%;
+  border-radius: 0;
+  -webkit-mask-image: repeating-linear-gradient(
+    to top,
+    var(--hud-text) 0 3px,
+    transparent 3px 5px
+  );
+  mask-image: repeating-linear-gradient(
+    to top,
+    var(--hud-text) 0 3px,
+    transparent 3px 5px
+  );
+  transition: height 0.25s ease;
+}
+
+.hcyber-pbar-fill.is-high {
+  background-color: var(--status-success);
+}
+
+.hcyber-pbar-fill.is-mid {
+  background-color: var(--cyber-yellow);
+}
+
+.hcyber-pbar-fill.is-low {
+  background-color: var(--status-danger);
+}
+
+.hcyber-pbar-fill.is-none {
+  background-color: transparent;
+}
+
+.hcyber-pbar-day {
+  font-size: 0.56rem;
+  line-height: 1;
+  padding: 2px 4px;
+  color: var(--hud-text-muted);
+  border-radius: 2px;
+}
+
+.hcyber-pbar-col.is-current .hcyber-pbar-day {
+  color: var(--hud-text);
+  font-weight: 600;
+  background-color: var(--hud-bg-elevated);
+  border: 1px solid var(--hcyber-color, var(--hud-accent));
+}
+
+.hcyber-micro {
+  font-family: var(--font-mono);
+  font-size: 7.4px;
+  letter-spacing: 0.1em;
+  fill: var(--hud-text-muted);
+  text-transform: uppercase;
+}
+
+.hcyber-pct-val {
+  font-family: var(--font-mono);
+  font-size: 27px;
+  font-weight: 600;
+  fill: var(--hud-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.habit-cyber-stage.is-tone-max .hcyber-pct-val,
+.habit-cyber-stage.is-tone-high .hcyber-pct-val {
+  fill: var(--status-success);
+}
+
+.habit-cyber-stage.is-tone-mid .hcyber-pct-val {
+  fill: var(--status-warning);
+}
+
+.habit-cyber-stage.is-tone-low .hcyber-pct-val {
+  fill: var(--status-danger);
+}
+
+.hcyber-pct-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.09em;
+  fill: var(--hud-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hcyber-ring-outer {
+  transform-origin: 140px 140px;
+  animation: hcyberSpinCW 26s linear infinite;
+  will-change: transform;
+}
+
+.hcyber-ring-mid {
+  transform-origin: 140px 140px;
+  animation: hcyberSpinCCW 16s linear infinite;
+  will-change: transform;
+}
+
+.hcyber-radar-sweep {
+  transform-origin: 140px 140px;
+  animation: hcyberSpinCW 5.5s linear infinite;
+  will-change: transform;
+}
+
+.hcyber-hex-spin {
+  transform-origin: 140px 140px;
+  animation: hcyberSpinCCW 22s linear infinite;
+  will-change: transform;
+}
+
+.hcyber-core-pulse {
+  transform-origin: 140px 140px;
+  animation: hcyberCorePulse 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.hcyber-led-pulse {
+  animation: hcyberLedBlink 1.5s ease-in-out infinite;
+}
+
+.hcyber-seg {
+  transition: stroke 0.2s ease, opacity 0.2s ease;
+}
+
+.hcyber-seg.is-pending {
+  opacity: 0.48;
+}
+
+.hcyber-progress-arc {
+  transition: stroke-dasharray 0.35s ease;
+}
+
+.hcyber-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 0;
+  border-top: 1px dashed var(--hud-border);
+  position: relative;
+  z-index: 1;
+}
+
+.hcyber-footer-status {
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  color: var(--hud-text-secondary);
+  text-transform: uppercase;
+}
+
+.habit-cyber-stage.is-tone-max .hcyber-footer-status {
+  color: var(--status-success);
+  font-weight: 600;
+}
+
+.hcyber-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 12px;
+}
+
+.hcyber-eq i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  background-color: var(--hcyber-color, var(--hud-accent));
+  border-radius: 1px;
+  transform-origin: bottom center;
+  animation: hcyberEqPulse 1.3s ease-in-out infinite;
+}
+
+.hcyber-eq i:nth-child(2) { animation-delay: 0.18s; }
+.hcyber-eq i:nth-child(3) { animation-delay: 0.36s; }
+.hcyber-eq i:nth-child(4) { animation-delay: 0.54s; }
+.hcyber-eq i:nth-child(5) { animation-delay: 0.72s; }
+
+@keyframes hcyberSpinCW {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes hcyberSpinCCW {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes hcyberCorePulse {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.16;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.42;
+  }
+}
+
+@keyframes hcyberLedBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes hcyberScanSweep {
+  0% { transform: translateY(0%); }
+  100% { transform: translateY(420%); }
+}
+
+@keyframes hcyberEqPulse {
+  0%, 100% { transform: scaleY(0.28); opacity: 0.55; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hcyber-ring-outer,
+  .hcyber-ring-mid,
+  .hcyber-radar-sweep,
+  .hcyber-hex-spin,
+  .hcyber-core-pulse,
+  .hcyber-led-pulse,
+  .hcyber-cell.is-lead,
+  .hcyber-scanline,
+  .hcyber-eq i {
+    animation: none;
+  }
+}
+
+@media (max-width: 1020px) {
+  .habit-visual-grid {
+    grid-template-columns: 1fr;
+  }
+  .habit-cyber-stage {
+    min-height: 240px;
+  }
 }
 
 .habit-chart-controls {

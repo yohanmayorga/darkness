@@ -21,11 +21,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-  <!-- Hojas de Estilo con Cache-Busting v4.4.0 -->
-  <link rel="stylesheet" href="assets/css/variables.css?v=5.7.2" />
+  <!-- Hojas de Estilo con Cache-Busting v6.9.2 -->
+  <link rel="stylesheet" href="assets/css/variables.css?v=5.9.5" />
   <link rel="stylesheet" href="assets/css/base.css?v=2.6.0" />
-  <link rel="stylesheet" href="assets/css/layout.css?v=5.6.4" />
-  <link rel="stylesheet" href="assets/css/components.css?v=6.8.1" />
+  <link rel="stylesheet" href="assets/css/layout.css?v=5.8.5" />
+  <link rel="stylesheet" href="assets/css/components.css?v=6.9.0" />
   <link rel="stylesheet" href="assets/css/journal.css?v=2.9.3" />
   <link rel="stylesheet" href="assets/css/habits.css?v=3.6.5" />
   <link rel="stylesheet" href="assets/css/f1.css?v=1.5.0" />
@@ -126,6 +126,120 @@
 
     <!-- Contenedor Principal -->
     <div class="main-wrapper">
+      <!-- Capa Ambiental Mecha / Editorial Cyber-HUD (Paneles, Mira Orbital, Barcode y Glitch) -->
+      <div class="hud-canvas-bg" aria-hidden="true">
+        <div class="hud-canvas-grid"></div>
+
+        <!-- Regla técnica superior -->
+        <div class="hud-canvas-ruler">
+          <span class="hud-ruler-ticks"></span>
+          <span class="hud-ruler-meta">DRK-NX // 0XR3-59 // SECTOR.07</span>
+          <span class="hud-ruler-ticks"></span>
+        </div>
+
+        <!-- Paneles geométricos biselados y pista mecha angular -->
+        <svg class="hud-canvas-mecha" viewBox="0 0 1200 800" preserveAspectRatio="none">
+          <!-- Panel angular superior izquierdo -->
+          <polygon points="0,0 240,0 160,80 0,80" class="hud-panel-shape" />
+          <path d="M 0 80 L 160 80 L 240 0" fill="none" stroke="currentColor" stroke-width="1" />
+          <line x1="16" y1="64" x2="30" y2="50" class="hud-panel-slash" />
+
+          <!-- Panel angular superior derecho -->
+          <polygon points="940,0 1200,0 1200,190 1055,190 940,75" class="hud-panel-shape" />
+          <path d="M 940 0 L 940 75 L 1055 190 L 1200 190" fill="none" stroke="currentColor" stroke-width="1" />
+          <line x1="1072" y1="172" x2="1088" y2="156" class="hud-panel-slash" />
+
+          <!-- Panel angular inferior izquierdo -->
+          <polygon points="0,560 95,560 185,650 185,800 0,800" class="hud-panel-shape" />
+          <path d="M 0 560 L 95 560 L 185 650 L 185 800" fill="none" stroke="currentColor" stroke-width="1.2" />
+          <line x1="20" y1="588" x2="38" y2="570" class="hud-panel-slash" />
+
+          <!-- Panel angular medio-derecho -->
+          <polygon points="1200,320 1120,400 1120,520 1200,520" class="hud-panel-shape" />
+          <path d="M 1200 320 L 1120 400 L 1120 520 L 1200 520" fill="none" stroke="currentColor" stroke-width="1.2" />
+          <line x1="1136" y1="504" x2="1152" y2="488" class="hud-panel-slash" />
+
+          <!-- Columna / Pista Mecha Angular Central-Derecha (estilo ref. 4) -->
+          <path d="M 760 0 L 760 90 L 820 150 L 820 310 L 745 385 L 745 535 L 810 600 L 810 800" fill="none" class="hud-spine-outer" />
+          <path d="M 792 0 L 792 78 L 852 138 L 852 322 L 777 397 L 777 523 L 842 588 L 842 800" fill="none" class="hud-spine-outer" />
+          <path d="M 776 0 L 776 84 L 836 144 L 836 316 L 761 391 L 761 529 L 826 594 L 826 800" fill="none" class="hud-spine-core" />
+          <circle cx="806" cy="215" r="3.2" class="hud-rivet hud-rivet-pulse" />
+          <circle cx="806" cy="272" r="3.2" class="hud-rivet" />
+          <circle cx="790" cy="458" r="3.2" class="hud-rivet hud-rivet-pulse" />
+          <circle cx="790" cy="505" r="3.2" class="hud-rivet" />
+          <circle cx="808" cy="675" r="3.2" class="hud-rivet hud-rivet-pulse" />
+          <circle cx="761" cy="529" r="24" fill="none" class="hud-spine-ring" />
+
+          <!-- Marcas de registro en esquinas -->
+          <path d="M 28 32 H 44 M 36 24 V 40" stroke="currentColor" stroke-width="1.2" />
+          <path d="M 1156 756 H 1172 M 1164 748 V 764" stroke="currentColor" stroke-width="1.2" />
+        </svg>
+
+        <!-- Bloque de Telemetría Inferior Izquierdo (Airlock / Pulso) -->
+        <div class="hud-airlock-widget">
+          <div class="hud-airlock-row">
+            <span class="hud-airlock-arrow">◄</span>
+            <span class="hud-airlock-code">004 // AIRLOCK</span>
+            <span class="hud-airlock-arrow">►</span>
+          </div>
+          <div class="hud-airlock-bars">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <span class="hud-airlock-sub">SECTOR.07 · DRK-OS</span>
+        </div>
+
+        <!-- Emblema Orbital / Mira Segmentada + Diagrama Sphere Dynamics (Superior Derecha) -->
+        <div class="hud-orbital-widget">
+          <svg class="hud-orbital-svg" viewBox="0 0 140 140" width="128" height="128">
+            <circle cx="70" cy="70" r="56" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="14 8 4 8" class="hud-orbital-ring-outer" />
+            <circle cx="70" cy="70" r="38" fill="none" stroke="currentColor" stroke-width="3.5" stroke-dasharray="18 12" class="hud-orbital-ring-seg" />
+            <circle cx="54" cy="60" r="14" fill="none" stroke="currentColor" stroke-width="0.9" opacity="0.75" />
+            <line x1="12" y1="70" x2="128" y2="70" stroke="currentColor" stroke-width="0.75" opacity="0.55" />
+            <line x1="70" y1="12" x2="70" y2="128" stroke="currentColor" stroke-width="0.75" opacity="0.55" />
+            <circle cx="70" cy="70" r="4.2" class="hud-orbital-core" />
+          </svg>
+          <div class="hud-orbital-meta">
+            <span>SPHERE // DYN</span>
+            <span>295.80 · 7G</span>
+          </div>
+        </div>
+
+        <!-- Código de Barras Vertical + Indicadores Pulsantes (Lateral Izquierdo) -->
+        <div class="hud-vbarcode-widget">
+          <svg class="hud-vbarcode-svg" viewBox="0 0 18 112" width="14" height="88" fill="currentColor">
+            <rect x="0" y="0" width="18" height="3"/><rect x="0" y="6" width="18" height="1.5"/>
+            <rect x="0" y="10" width="18" height="4.5"/><rect x="0" y="17" width="18" height="1.5"/>
+            <rect x="0" y="21" width="18" height="2.5"/><rect x="0" y="26" width="18" height="5"/>
+            <rect x="0" y="34" width="18" height="1.5"/><rect x="0" y="38" width="18" height="3"/>
+            <rect x="0" y="44" width="18" height="2"/><rect x="0" y="49" width="18" height="5.5"/>
+            <rect x="0" y="57" width="18" height="1.5"/><rect x="0" y="61" width="18" height="3.5"/>
+            <rect x="0" y="67" width="18" height="1.5"/><rect x="0" y="72" width="18" height="4"/>
+            <rect x="0" y="79" width="18" height="2"/><rect x="0" y="84" width="18" height="5"/>
+            <rect x="0" y="92" width="18" height="1.5"/><rect x="0" y="96" width="18" height="3"/>
+            <rect x="0" y="102" width="18" height="2"/><rect x="0" y="107" width="18" height="5"/>
+          </svg>
+          <span class="hud-vbarcode-code">0XR3-59</span>
+        </div>
+
+        <!-- Bloque Editorial Gigante + Airlock Spec con Glitch y Pulsación (Inferior Derecha) -->
+        <div class="hud-canvas-watermark">
+          <span class="hud-giant-num" id="hud-giant-num">01</span>
+          <div class="hud-spec-badge">
+            <div class="hud-spec-top">
+              <span class="hud-spec-tri"></span>
+              <span class="hud-watermark-code" id="hud-watermark-code">SYS.01</span>
+              <span class="hud-spec-leds">
+                <i class="hud-led"></i><i class="hud-led"></i><i class="hud-led"></i><i class="hud-led"></i>
+              </span>
+            </div>
+            <div class="hud-spec-bottom">
+              <span class="hud-watermark-tag" id="hud-watermark-tag">CORE // OVERVIEW</span>
+              <span class="hud-spec-stripes"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Barra Superior Móvil (Visible en Teléfonos) -->
       <header class="mobile-topbar">
         <a href="#/dashboard" class="brand">
@@ -152,7 +266,7 @@
     <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Navegación Móvil"></nav>
   </div>
 
-  <!-- Aplicación Modular con Cache-Busting v6.9.28 -->
-  <script type="module" src="js/app.js?v=6.9.28"></script>
+  <!-- Aplicación Modular con Cache-Busting v6.9.30 -->
+  <script type="module" src="js/app.js?v=6.9.30"></script>
 </body>
 </html>

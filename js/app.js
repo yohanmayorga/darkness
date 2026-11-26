@@ -167,6 +167,21 @@ function initShell() {
   window.addEventListener('darkness:data-updated', updateUserFooter);
 
   // 7. Enrutador Hash
+  const HUD_MODULES = {
+    '/dashboard': { num: '01', code: 'SYS.01', tag: 'CORE // OVERVIEW' },
+    '/habits':    { num: '02', code: 'SYS.02', tag: 'HABITS // PROTOCOL' },
+    '/tasks':     { num: '03', code: 'SYS.03', tag: 'TASKS // QUEUE' },
+    '/body':      { num: '04', code: 'SYS.04', tag: 'BIOMETRICS // LOG' },
+    '/reading':   { num: '05', code: 'SYS.05', tag: 'ARCHIVE // LIBRARY' },
+    '/journal':   { num: '06', code: 'SYS.06', tag: 'MEMORY // JOURNAL' },
+    '/finance':   { num: '07', code: 'SYS.07', tag: 'LEDGER // FINANCE' },
+    '/f1':        { num: '08', code: 'SYS.08', tag: 'TELEMETRY // F1' },
+    '/settings':  { num: '09', code: 'SYS.09', tag: 'SYSTEM // CONFIG' }
+  };
+  const hudNumEl = document.getElementById('hud-giant-num');
+  const hudCodeEl = document.getElementById('hud-watermark-code');
+  const hudTagEl = document.getElementById('hud-watermark-tag');
+
   const mountNode = document.getElementById('app-view');
   initRouter(mountNode, (activePath) => {
     renderNavigation();
@@ -175,6 +190,10 @@ function initShell() {
     shell?.classList.toggle('route-body', activePath === '/body');
     shell?.classList.remove('memento-open');
     shell?.classList.remove('focus-mode');
+    const mod = HUD_MODULES[activePath] || HUD_MODULES['/dashboard'];
+    if (hudNumEl) hudNumEl.textContent = mod.num;
+    if (hudCodeEl) hudCodeEl.textContent = mod.code;
+    if (hudTagEl) hudTagEl.textContent = mod.tag;
   });
 
   // 8. Sincronización automática desde la nube al abrir la página (sin pedir login de nuevo)

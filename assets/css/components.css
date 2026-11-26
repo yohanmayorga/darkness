@@ -45,7 +45,9 @@
   border: 1px solid var(--hud-border);
   border-radius: var(--radius-sm);
   padding: 16px;
-  box-shadow: var(--hud-shadow);
+  box-shadow: var(--hud-card-highlight), var(--hud-shadow);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   clip-path: polygon(
     0 0,
     calc(100% - var(--cyber-cut-md)) 0,
@@ -117,7 +119,9 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: var(--hud-shadow);
+  box-shadow: var(--hud-card-highlight), var(--hud-shadow);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   clip-path: polygon(
     0 0,
     calc(100% - var(--cyber-cut-sm)) 0,

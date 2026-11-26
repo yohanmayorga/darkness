@@ -53,6 +53,28 @@
   --cyber-aside-rail: repeating-linear-gradient(-45deg, rgba(245, 230, 66, 0.88) 0 4px, transparent 4px 9px);
   --cyber-bracket: rgba(255, 255, 255, 0.34);
 
+  /* Fondo Cyber-HUD Dinámico (Modo Oscuro) */
+  --hud-ambient-glow:
+    radial-gradient(ellipse 68% 52% at 14% 8%, rgba(228, 228, 235, 0.065) 0%, transparent 64%),
+    radial-gradient(ellipse 52% 46% at 88% 92%, rgba(245, 230, 66, 0.035) 0%, transparent 62%),
+    radial-gradient(circle at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.42) 100%);
+  --hud-blueprint-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cpath d='M96 0H0V96' fill='none' stroke='rgba(255,255,255,0.055)' stroke-width='1'/%3E%3Cg fill='rgba(255,255,255,0.09)'%3E%3Ccircle cx='24' cy='24' r='0.8'/%3E%3Ccircle cx='48' cy='24' r='0.8'/%3E%3Ccircle cx='72' cy='24' r='0.8'/%3E%3Ccircle cx='24' cy='48' r='0.8'/%3E%3Ccircle cx='48' cy='48' r='0.8'/%3E%3Ccircle cx='72' cy='48' r='0.8'/%3E%3Ccircle cx='24' cy='72' r='0.8'/%3E%3Ccircle cx='48' cy='72' r='0.8'/%3E%3Ccircle cx='72' cy='72' r='0.8'/%3E%3C/g%3E%3Cpath d='M0 4.5V0h4.5M91.5 0H96v4.5M0 91.5V96h4.5' fill='none' stroke='rgba(255,255,255,0.20)' stroke-width='1'/%3E%3C/svg%3E");
+  --hud-circuit-stroke: rgba(255, 255, 255, 0.18);
+  --hud-circuit-node: rgba(245, 230, 66, 0.72);
+  --hud-panel-fill: rgba(255, 255, 255, 0.048);
+  --hud-panel-stroke: rgba(255, 255, 255, 0.17);
+  --hud-graphic-ink: rgba(244, 244, 245, 0.34);
+  --hud-graphic-soft: rgba(244, 244, 245, 0.14);
+  --hud-graphic-accent: rgba(245, 230, 66, 0.85);
+  --hud-giant-num: rgba(244, 244, 245, 0.11);
+  --hud-watermark-stroke: rgba(255, 255, 255, 0.28);
+  --hud-watermark-meta: rgba(255, 255, 255, 0.48);
+  --hud-ruler-tick: rgba(255, 255, 255, 0.24);
+  --hud-ruler-tick-major: rgba(255, 255, 255, 0.48);
+  --hud-glitch-a: rgba(245, 230, 66, 0.65);
+  --hud-glitch-b: rgba(56, 189, 248, 0.55);
+  --hud-card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
   /* Bordes y Divisores */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-default: rgba(255, 255, 255, 0.15);
@@ -75,11 +97,11 @@
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.9);
 
   /* Superficies HUD con Contraste Suave (Tarjetas / KPIs / Modales) */
-  --hud-bg: #121217;
+  --hud-bg: rgba(18, 18, 23, 0.88);
   --hud-bg-header: #0C0C10;
   --hud-bg-elevated: #181820;
   --hud-bg-hover: #20202A;
-  --hud-kpi-bg: #0E0E13;
+  --hud-kpi-bg: rgba(14, 14, 19, 0.86);
   --hud-kpi-value: #F4F4F5;
   --hud-text: #F4F4F5;
   --hud-text-secondary: #A8A8B3;
@@ -170,6 +192,28 @@
   --cyber-aside-rail: repeating-linear-gradient(-45deg, #111114 0 4px, transparent 4.5px 9px);
   --cyber-bracket: rgba(0, 0, 0, 0.30);
 
+  /* Fondo Cyber-HUD Dinámico (Modo Claro Técnico) */
+  --hud-ambient-glow:
+    radial-gradient(ellipse 72% 56% at 14% 6%, rgba(255, 255, 255, 0.78) 0%, transparent 65%),
+    radial-gradient(ellipse 58% 52% at 88% 92%, rgba(168, 170, 184, 0.34) 0%, transparent 64%),
+    radial-gradient(circle at 50% 50%, transparent 48%, rgba(24, 24, 34, 0.065) 100%);
+  --hud-blueprint-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cpath d='M96 0H0V96' fill='none' stroke='rgba(17,17,24,0.065)' stroke-width='1'/%3E%3Cg fill='rgba(17,17,24,0.13)'%3E%3Ccircle cx='24' cy='24' r='0.85'/%3E%3Ccircle cx='48' cy='24' r='0.85'/%3E%3Ccircle cx='72' cy='24' r='0.85'/%3E%3Ccircle cx='24' cy='48' r='0.85'/%3E%3Ccircle cx='48' cy='48' r='0.85'/%3E%3Ccircle cx='72' cy='48' r='0.85'/%3E%3Ccircle cx='24' cy='72' r='0.85'/%3E%3Ccircle cx='48' cy='72' r='0.85'/%3E%3Ccircle cx='72' cy='72' r='0.85'/%3E%3C/g%3E%3Cpath d='M0 4.5V0h4.5M91.5 0H96v4.5M0 91.5V96h4.5' fill='none' stroke='rgba(17,17,24,0.24)' stroke-width='1'/%3E%3C/svg%3E");
+  --hud-circuit-stroke: rgba(17, 17, 24, 0.24);
+  --hud-circuit-node: rgba(17, 17, 24, 0.65);
+  --hud-panel-fill: rgba(17, 17, 24, 0.082);
+  --hud-panel-stroke: rgba(17, 17, 24, 0.24);
+  --hud-graphic-ink: rgba(17, 17, 24, 0.42);
+  --hud-graphic-soft: rgba(17, 17, 24, 0.18);
+  --hud-graphic-accent: rgba(17, 17, 24, 0.78);
+  --hud-giant-num: rgba(17, 17, 24, 0.14);
+  --hud-watermark-stroke: rgba(17, 17, 24, 0.34);
+  --hud-watermark-meta: rgba(17, 17, 24, 0.56);
+  --hud-ruler-tick: rgba(17, 17, 24, 0.28);
+  --hud-ruler-tick-major: rgba(17, 17, 24, 0.55);
+  --hud-glitch-a: rgba(220, 38, 38, 0.45);
+  --hud-glitch-b: rgba(2, 132, 199, 0.45);
+  --hud-card-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.92);
+
   /* Bordes y Divisores */
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-default: rgba(0, 0, 0, 0.14);
@@ -192,11 +236,11 @@
   --shadow-lg: 0 14px 34px rgba(0, 0, 0, 0.20);
 
   /* Superficies HUD con Contraste Suave (Modo Claro Cyberpunk) */
-  --hud-bg: #FAFAFC;
+  --hud-bg: rgba(252, 252, 255, 0.90);
   --hud-bg-header: #E3E3EA;
   --hud-bg-elevated: #F1F1F6;
   --hud-bg-hover: #E6E6EE;
-  --hud-kpi-bg: #F4F4F8;
+  --hud-kpi-bg: rgba(247, 247, 251, 0.88);
   --hud-kpi-value: #111114;
   --hud-text: #111114;
   --hud-text-secondary: #4B4B55;
@@ -213,7 +257,7 @@
   --hud-chart-bar: rgba(24, 24, 27, 0.28);
   --hud-chart-grid: rgba(0, 0, 0, 0.07);
   --hud-chart-fill: rgba(24, 24, 27, 0.08);
-  --hud-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+  --hud-shadow: 0 6px 20px rgba(17, 17, 24, 0.085), 0 1px 3px rgba(17, 17, 24, 0.05);
 
   /* Gráficos y Memento Mori */
   --chart-line: #18181B;

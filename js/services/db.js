@@ -288,6 +288,9 @@ export function getStore() {
  * Guarda el almacén local y dispara sincronización en segundo plano si Supabase está activo
  */
 export function saveStore(store) {
+  if (store && typeof store === 'object') {
+    store._updatedAt = new Date().toISOString();
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   window.dispatchEvent(new CustomEvent('darkness:data-updated'));
   syncToSupabaseIfConfigured(store).catch(() => {});
@@ -383,8 +386,127 @@ export async function getFirebaseClient() {
   }
 }
 
+const MEDIA_PREFIX = '__media__:';
+const MEDIA_MIN_LEN = 2048;
+
+function hashMediaString(str) {
+  let h1 = 0x811c9dc5;
+  let h2 = 0x9e3779b9;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 ^= c;
+    h1 = Math.imul(h1, 0x01000193);
+    h2 ^= c;
+    h2 = Math.imul(h2, 0x85ebca6b);
+  }
+  return `m_${(h1 >>> 0).toString(36)}_${(h2 >>> 0).toString(36)}_${str.length.toString(36)}`;
+}
+
+function extractMediaFromPayload(node, mediaMap) {
+  if (typeof node === 'string') {
+    if (node.startsWith('data:') && node.length >= MEDIA_MIN_LEN) {
+      const id = hashMediaString(node);
+      mediaMap.set(id, node);
+      return `${MEDIA_PREFIX}${id}`;
+    }
+    return node;
+  }
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      node[i] = extractMediaFromPayload(node[i], mediaMap);
+    }
+    return node;
+  }
+  if (node && typeof node === 'object') {
+    for (const key of Object.keys(node)) {
+      node[key] = extractMediaFromPayload(node[key], mediaMap);
+    }
+    return node;
+  }
+  return node;
+}
+
+function collectMediaRefs(node, refSet) {
+  if (typeof node === 'string') {
+    if (node.startsWith(MEDIA_PREFIX)) {
+      refSet.add(node.slice(MEDIA_PREFIX.length));
+    }
+    return;
+  }
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) collectMediaRefs(node[i], refSet);
+    return;
+  }
+  if (node && typeof node === 'object') {
+    for (const key of Object.keys(node)) collectMediaRefs(node[key], refSet);
+  }
+}
+
+function hydrateMediaInPayload(node, mediaMap) {
+  if (typeof node === 'string') {
+    if (node.startsWith(MEDIA_PREFIX)) {
+      const id = node.slice(MEDIA_PREFIX.length);
+      return mediaMap.has(id) ? mediaMap.get(id) : '';
+    }
+    return node;
+  }
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      node[i] = hydrateMediaInPayload(node[i], mediaMap);
+    }
+    return node;
+  }
+  if (node && typeof node === 'object') {
+    for (const key of Object.keys(node)) {
+      node[key] = hydrateMediaInPayload(node[key], mediaMap);
+    }
+    return node;
+  }
+  return node;
+}
+
+function getSyncedMediaSet(uid) {
+  try {
+    const raw = localStorage.getItem(`darkness_synced_media_${uid}`);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSyncedMediaSet(uid, set) {
+  try {
+    localStorage.setItem(`darkness_synced_media_${uid}`, JSON.stringify([...set]));
+  } catch {
+    // Ignorar si localStorage está lleno
+  }
+}
+
 /**
- * Sincroniza un snapshot JSON del usuario autenticado en Cloud Firestore (colección `users/{uid}`)
+ * Calcula los bytes totales del store, los bytes en imágenes/adjuntos data: y los bytes del documento principal de Firestore
+ */
+export function getStoreStorageStats(storeData = null) {
+  const data = storeData || getStore();
+  const rawJson = JSON.stringify(data);
+  const totalBytes = new Blob([rawJson]).size;
+  const mediaMap = new Map();
+  const stripped = extractMediaFromPayload(JSON.parse(rawJson), mediaMap);
+  const docBytes = new Blob([JSON.stringify(stripped)]).size;
+  let mediaBytes = 0;
+  mediaMap.forEach(v => { mediaBytes += v.length; });
+  return {
+    totalBytes,
+    docBytes,
+    mediaBytes,
+    mediaCount: mediaMap.size
+  };
+}
+
+/**
+ * Sincroniza un snapshot JSON del usuario autenticado en Cloud Firestore:
+ * - Documento principal: `users/{uid}` (solo datos ligeros + referencias __media__)
+ * - Imágenes/adjuntos grandes: subcolección `users/{uid}/media/{mediaId}` (1 doc por archivo)
  */
 export async function syncToFirebaseIfConfigured(storeData = null) {
   const fb = await getFirebaseClient();
@@ -395,11 +517,31 @@ export async function syncToFirebaseIfConfigured(storeData = null) {
   if (!user) return { ok: false, reason: 'not_authenticated' };
 
   const payload = JSON.parse(JSON.stringify(storeData || getStore()));
+  const mediaMap = new Map();
+  extractMediaFromPayload(payload, mediaMap);
+
+  const nowIso = new Date().toISOString();
   try {
+    if (mediaMap.size > 0) {
+      const syncedSet = getSyncedMediaSet(user.uid);
+      const pending = [...mediaMap.entries()].filter(([id]) => !syncedSet.has(id));
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+        const chunk = pending.slice(i, i + BATCH_SIZE);
+        await Promise.all(chunk.map(async ([mediaId, dataUrl]) => {
+          const mediaRef = fb.fsMod.doc(fb.db, 'users', user.uid, 'media', mediaId);
+          await fb.fsMod.setDoc(mediaRef, { data: dataUrl, updatedAt: nowIso });
+          syncedSet.add(mediaId);
+        }));
+      }
+      if (pending.length > 0) saveSyncedMediaSet(user.uid, syncedSet);
+    }
+
     const ref = fb.fsMod.doc(fb.db, 'users', user.uid);
     await fb.fsMod.setDoc(ref, {
       payload,
-      updatedAt: new Date().toISOString()
+      mediaVersion: 2,
+      updatedAt: nowIso
     }, { merge: true });
     return { ok: true };
   } catch (err) {
@@ -410,10 +552,22 @@ export async function syncToFirebaseIfConfigured(storeData = null) {
 
 export const syncToSupabaseIfConfigured = syncToFirebaseIfConfigured;
 
+function countStoreRecords(s) {
+  if (!s || typeof s !== 'object') return 0;
+  return (s.habits?.length || 0)
+    + (s.bodyMetrics?.length || 0)
+    + (s.books?.length || 0)
+    + (s.journalEntries?.length || 0)
+    + (s.transactions?.length || 0)
+    + (s.tasks?.length || 0);
+}
+
 /**
- * Descarga el snapshot desde Cloud Firestore y actualiza el almacenamiento local
+ * Descarga el snapshot desde Cloud Firestore (rehidratando imágenes desde `users/{uid}/media`).
+ * Por seguridad, en modo automático (`force: false`) NO sobrescribe datos locales si son más recientes
+ * o contienen más registros que la copia de la nube.
  */
-export async function pullFromFirebase() {
+export async function pullFromFirebase({ force = false } = {}) {
   const fb = await getFirebaseClient();
   if (!fb) return { ok: false, reason: 'not_configured' };
 
@@ -425,9 +579,57 @@ export async function pullFromFirebase() {
     const ref = fb.fsMod.doc(fb.db, 'users', user.uid);
     const snap = await fb.fsMod.getDoc(ref);
     if (snap.exists() && snap.data()?.payload) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(snap.data().payload));
+      const payload = JSON.parse(JSON.stringify(snap.data().payload));
+      const remoteUpdatedAt = snap.data().updatedAt || payload._updatedAt || '';
+
+      if (!force) {
+        const localRaw = localStorage.getItem(STORAGE_KEY);
+        if (localRaw) {
+          try {
+            const localStore = JSON.parse(localRaw);
+            const localUpdatedAt = localStore?._updatedAt || '';
+            const localCount = countStoreRecords(localStore);
+            const remoteCount = countStoreRecords(payload);
+            if ((localUpdatedAt && remoteUpdatedAt && localUpdatedAt > remoteUpdatedAt) || localCount > remoteCount) {
+              return { ok: false, reason: 'local_is_newer' };
+            }
+          } catch {
+            // Continuar si el local está corrupto
+          }
+        }
+      }
+
+      const refs = new Set();
+      collectMediaRefs(payload, refs);
+
+      if (refs.size > 0) {
+        const mediaCol = fb.fsMod.collection(fb.db, 'users', user.uid, 'media');
+        const mediaSnap = await fb.fsMod.getDocs(mediaCol);
+        const mediaMap = new Map();
+        const syncedSet = getSyncedMediaSet(user.uid);
+        mediaSnap.forEach(docSnap => {
+          const d = docSnap.data()?.data;
+          if (typeof d === 'string') {
+            mediaMap.set(docSnap.id, d);
+            syncedSet.add(docSnap.id);
+          }
+        });
+        saveSyncedMediaSet(user.uid, syncedSet);
+        hydrateMediaInPayload(payload, mediaMap);
+      }
+
+      // Guardar copia de seguridad local previa antes de sobrescribir
+      const prevRaw = localStorage.getItem(STORAGE_KEY);
+      if (prevRaw) {
+        try { localStorage.setItem('darkness_backup_prev_v1', prevRaw); } catch {}
+      }
+
+      if (remoteUpdatedAt && !payload._updatedAt) {
+        payload._updatedAt = remoteUpdatedAt;
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       window.dispatchEvent(new CustomEvent('darkness:data-updated'));
-      return { ok: true, updatedAt: snap.data().updatedAt };
+      return { ok: true, updatedAt: remoteUpdatedAt };
     }
     return { ok: false, reason: 'empty' };
   } catch (err) {
@@ -438,9 +640,9 @@ export async function pullFromFirebase() {
 export const pullFromSupabase = pullFromFirebase;
 
 /**
- * Convierte un archivo o imagen subida en DataURL comprimido (redimensionado automático para cuidar memoria)
+ * Convierte un archivo o imagen subida en DataURL con buena nitidez (sin sobre-comprimir)
  */
-export function fileToDataUrl(file, { maxWidth = 480, quality = 0.78 } = {}) {
+export function fileToDataUrl(file, { maxWidth = 720, quality = 0.88 } = {}) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve('');
     const reader = new FileReader();

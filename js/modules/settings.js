@@ -7,9 +7,10 @@ import {
   setFirebaseConfig,
   isFirebaseConfigured,
   syncToFirebaseIfConfigured,
-  pullFromFirebase
-} from '../services/db.js?v=6.9.0';
-import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser, migrateStoreToPin, isValidPin } from '../services/auth.js?v=6.9.0';
+  pullFromFirebase,
+  getStoreStorageStats
+} from '../services/db.js?v=6.9.6';
+import { getCurrentSession, loginUser, registerCloudUser, loginWithGoogle, logoutUser, migrateStoreToPin, isValidPin } from '../services/auth.js?v=6.9.5';
 import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
@@ -260,28 +261,26 @@ export function renderSettings(container) {
           Almacenando <strong class="mono">${store.habits.length}</strong> hábitos, <strong class="mono">${store.bodyMetrics.length}</strong> mediciones, <strong class="mono">${store.books.length}</strong> libros, <strong class="mono">${store.journalEntries.length}</strong> entradas de diario y <strong class="mono">${store.transactions.length}</strong> movimientos.
         </p>
         ${(() => {
-          const rawJson = JSON.stringify(store);
-          const totalBytes = new Blob([rawJson]).size;
-          const imagesBytes = (store.books || []).reduce((acc, b) => acc + (b.coverUrl ? b.coverUrl.length : 0), 0)
-            + (store.journalEntries || []).reduce((acc, j) => acc + (j.attachmentData ? j.attachmentData.length : 0), 0);
+          const { totalBytes, docBytes, mediaBytes, mediaCount } = getStoreStorageStats(store);
           const fmtSize = bytes => bytes >= 1048576
             ? `${(bytes / 1048576).toFixed(2)} MB`
             : `${Math.max(1, Math.round(bytes / 1024))} KB`;
           const localLimit = 5 * 1024 * 1024;
           const localPct = Math.min(100, Math.round((totalBytes / localLimit) * 100));
           const firestoreLimit = 1024 * 1024;
-          const fsPct = ((totalBytes / firestoreLimit) * 100).toFixed(1);
+          const fsPct = ((docBytes / firestoreLimit) * 100).toFixed(1);
           return `
             <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--hud-border);">
               <div style="display:flex;justify-content:space-between;font-size:0.74rem;margin-bottom:5px;" class="mono">
-                <span>Memoria usada: <strong>${fmtSize(totalBytes)}</strong></span>
-                <span class="text-muted">${localPct}% de 5 MB local</span>
+                <span>Memoria local: <strong>${fmtSize(totalBytes)}</strong></span>
+                <span class="text-muted">${localPct}% de 5 MB</span>
               </div>
               <div class="progress-track">
                 <div class="progress-fill" style="width:${Math.max(2, localPct)}%"></div>
               </div>
-              <div class="mono text-muted" style="font-size:0.68rem;margin-top:6px;">
-                Imágenes: ${fmtSize(imagesBytes)} · Firestore (1 MB/doc): ${fsPct}% usado
+              <div class="mono text-muted" style="font-size:0.68rem;margin-top:6px;line-height:1.45;">
+                Firestore doc: <strong>${fmtSize(docBytes)}</strong> (${fsPct}% de 1 MB)<br/>
+                Imágenes en subcolección (${mediaCount}): ${fmtSize(mediaBytes)}
               </div>
             </div>
           `;
@@ -420,7 +419,7 @@ export function renderSettings(container) {
   });
 
   container.querySelector('#btn-sync-pull')?.addEventListener('click', async () => {
-    const res = await pullFromFirebase();
+    const res = await pullFromFirebase({ force: true });
     if (res.ok) {
       showToast('Datos descargados desde Firebase');
       renderSettings(container);

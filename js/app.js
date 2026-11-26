@@ -1,12 +1,12 @@
-import { initRouter, getActiveRoute } from './router.js?v=6.9.16';
-import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.9.1';
+import { initRouter, getActiveRoute } from './router.js?v=6.9.18';
+import { getStore, isFirebaseConfigured, pullFromFirebase, getFirebaseClient } from './services/db.js?v=6.9.6';
 import {
   handleGoogleRedirectResult,
   loginWithPin,
   registerWithPin,
   loginWithGoogle,
   isValidPin
-} from './services/auth.js?v=6.9.0';
+} from './services/auth.js?v=6.9.5';
 import { icon } from './components/icons.js?v=3.4.0';
 import { renderMementoSidebar, computeMementoStats, drawMementoCanvas } from './components/memento.js?v=6.9.0';
 import { initGlobalSearch } from './components/search.js?v=1.3.1';

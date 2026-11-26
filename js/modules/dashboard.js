@@ -1,4 +1,4 @@
-import { getStore, saveStore, todayISO } from '../services/db.js?v=6.9.0';
+import { getStore, saveStore, todayISO } from '../services/db.js?v=6.9.5';
 import { icon } from '../components/icons.js?v=3.3.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { renderMementoSidebar } from '../components/memento.js?v=1.6.0';

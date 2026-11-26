@@ -4,7 +4,7 @@ import {
   saveStore,
   pullFromFirebase,
   syncToFirebaseIfConfigured
-} from './db.js?v=6.9.1';
+} from './db.js?v=6.9.5';
 
 const SESSION_KEY = 'darkness_session_v1';
 

@@ -4,11 +4,44 @@ import { openModal, closeModal } from '../components/modal.js?v=1.4.0';
 import { showToast } from '../components/toast.js?v=1.4.0';
 import { buildUnifiedCalendarHTML, bindUnifiedCalendar } from '../components/calendar.js?v=2.6.0';
 import { formatDateDMY } from '../utils/text.js?v=4.3.0';
-import { asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
+import { hudFrameOrnaments, asideCyberDecal } from '../components/hudFrame.js?v=1.1.1';
+import { attachChartZoom, formatZoomLabel } from '../utils/chartZoom.js?v=1.0.0';
 
 let txFilter = 'all';
 let chartScope = 'month';
+let dailyChartRange = 'all';
+let dailyChartZoom = 1;
+let activeOutsideTooltipHandler = null;
 const calState = { year: null, month: null, selectedDate: '' };
+
+const DAILY_RANGES = [
+  { key: 7, label: '7D' },
+  { key: 30, label: '30D' },
+  { key: 90, label: '90D' },
+  { key: 'all', label: 'Todo' }
+];
+
+function parseISODate(iso) {
+  const [y, m, d] = String(iso || '').split('-').map(Number);
+  return new Date(y || 1970, (m || 1) - 1, d || 1);
+}
+
+function toISODate(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function addDaysISO(iso, n) {
+  const d = parseISODate(iso);
+  d.setDate(d.getDate() + n);
+  return toISODate(d);
+}
+
+function formatDayWithWeekday(iso) {
+  const names = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const d = parseISODate(iso);
+  return `${names[d.getDay()]} ${formatDateDMY(iso)}`;
+}
 
 const DEFAULT_FINANCE_CATEGORIES = {
   expense: [
@@ -173,6 +206,59 @@ export function renderFinance(container) {
     .sort((a, b) => b.amount - a.amount);
   const chartTotalExpense = chartItems.reduce((acc, i) => acc + i.amount, 0);
 
+  // Datos para el gráfico de barras de gastos diarios (historial de movimientos)
+  const validExpenseTxs = txs.filter(t => t.type === 'expense' && /^\d{4}-\d{2}-\d{2}$/.test(t.date || ''));
+  const dailyMap = new Map();
+  validExpenseTxs.forEach(t => {
+    const entry = dailyMap.get(t.date) || { iso: t.date, total: 0, items: [] };
+    const amt = Number(t.amount) || 0;
+    entry.total += amt;
+    entry.items.push({
+      description: t.description || 'Sin descripción',
+      category: t.category || 'Otro',
+      amount: amt
+    });
+    dailyMap.set(t.date, entry);
+  });
+  dailyMap.forEach(entry => {
+    entry.items.sort((a, b) => b.amount - a.amount);
+  });
+
+  const sortedExpenseDates = [...dailyMap.keys()].sort();
+  let dailyEnd = today;
+  if (sortedExpenseDates.length && sortedExpenseDates[sortedExpenseDates.length - 1] > dailyEnd) {
+    dailyEnd = sortedExpenseDates[sortedExpenseDates.length - 1];
+  }
+  let dailyStart;
+  if (dailyChartRange === 'all') {
+    dailyStart = sortedExpenseDates.length ? sortedExpenseDates[0] : addDaysISO(today, -29);
+    if (dailyStart > addDaysISO(dailyEnd, -6)) dailyStart = addDaysISO(dailyEnd, -6);
+  } else {
+    dailyStart = addDaysISO(today, -(dailyChartRange - 1));
+    dailyEnd = today;
+  }
+
+  const dailySeries = [];
+  for (let iso = dailyStart; iso <= dailyEnd; iso = addDaysISO(iso, 1)) {
+    const found = dailyMap.get(iso);
+    dailySeries.push(found || { iso, total: 0, items: [] });
+  }
+  const dailySeriesByIso = new Map(dailySeries.map(d => [d.iso, d]));
+  const dailyPeriodTotal = dailySeries.reduce((acc, d) => acc + d.total, 0);
+  const dailyMaxDay = dailySeries.reduce((best, d) => (!best || d.total > best.total ? d : best), null);
+  const dailyMaxVal = dailyMaxDay ? dailyMaxDay.total : 0;
+  const dailyAvgPerDay = dailySeries.length ? dailyPeriodTotal / dailySeries.length : 0;
+
+  const dailyChartHTML = buildDailyExpensesChartHTML({
+    series: dailySeries,
+    periodTotal: dailyPeriodTotal,
+    avgPerDay: dailyAvgPerDay,
+    maxDay: dailyMaxDay,
+    maxVal: dailyMaxVal,
+    hasAnyExpense: validExpenseTxs.length > 0,
+    currency
+  });
+
   container.innerHTML = `
     <header class="page-header">
       <div class="page-title-group">
@@ -332,6 +418,26 @@ export function renderFinance(container) {
       </div>
     </section>
 
+    <section class="card fin-daily-card cyber-frame-wrap" style="margin-bottom:20px;">
+      ${hudFrameOrnaments()}
+      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+        <h2 class="card-title">${icon('finance')} Gastos diarios</h2>
+        <div class="fin-daily-controls">
+          <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica de gastos">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-fd-zoom-out" title="Alejar zoom">−</button>
+            <button type="button" class="btn btn-secondary btn-sm mono" id="btn-fd-zoom-reset" title="Restablecer zoom">${formatZoomLabel(dailyChartZoom)}</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-fd-zoom-in" title="Acercar zoom">+</button>
+          </div>
+          <div class="fin-range" role="group" aria-label="Rango del gráfico de gastos diarios">
+            ${DAILY_RANGES.map(r => `
+              <button type="button" class="fin-range-btn ${dailyChartRange === r.key ? 'active' : ''}" data-fin-daily-range="${r.key}">${r.label}</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+      ${dailyChartHTML}
+    </section>
+
     <section class="card" style="margin-bottom:20px;">
       <div class="card-header">
         <h2 class="card-title">${icon('finance')} En qué estoy gastando (Categorías)</h2>
@@ -349,10 +455,11 @@ export function renderFinance(container) {
         <div class="finance-chart-list">
           ${chartItems.map(item => {
             const pct = chartTotalExpense > 0 ? Math.round((item.amount / chartTotalExpense) * 100) : 0;
+            const avg = item.count > 0 ? item.amount / item.count : 0;
             return `
               <div class="finance-chart-row">
                 <div class="finance-chart-meta">
-                  <span class="finance-chart-cat">${escapeHtml(item.category)} <span class="text-muted">(${item.count})</span></span>
+                  <span class="finance-chart-cat">${escapeHtml(item.category)} <span class="text-muted">(${item.count})</span> <span class="finance-chart-avg mono">· Promedio: ${fmtMoney(avg, currency)}</span></span>
                   <span class="finance-chart-val">${fmtMoney(item.amount, currency)} · ${pct}%</span>
                 </div>
                 <div class="finance-chart-track">
@@ -483,6 +590,57 @@ export function renderFinance(container) {
     });
   });
 
+  // Rango de gráfica diaria de gastos
+  container.querySelectorAll('[data-fin-daily-range]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.getAttribute('data-fin-daily-range');
+      dailyChartRange = val === 'all' ? 'all' : Number(val);
+      renderFinance(container);
+    });
+  });
+
+  // Zoom de gráfica diaria de gastos (botones, rueda y pellizco táctil)
+  const updateDailyZoom = (restoreScroll) => {
+    const plotEl = container.querySelector('.fin-daily-plot');
+    const zoomBtn = container.querySelector('#btn-fd-zoom-reset');
+    if (plotEl) {
+      const basePx = Number(plotEl.dataset.baseWidth || 0);
+      if (basePx > 0) {
+        plotEl.style.width = `${dailyChartZoom * 100}%`;
+        plotEl.style.minWidth = `${Math.round(basePx * dailyChartZoom)}px`;
+      } else {
+        plotEl.style.width = `${dailyChartZoom * 100}%`;
+      }
+    }
+    if (zoomBtn) zoomBtn.textContent = formatZoomLabel(dailyChartZoom);
+    if (typeof restoreScroll === 'function') restoreScroll();
+  };
+
+  container.querySelector('#btn-fd-zoom-in')?.addEventListener('click', () => {
+    dailyChartZoom = Math.min(6, Number((dailyChartZoom + 0.5).toFixed(2)));
+    updateDailyZoom();
+  });
+  container.querySelector('#btn-fd-zoom-out')?.addEventListener('click', () => {
+    dailyChartZoom = Math.max(1, Number((dailyChartZoom - 0.5).toFixed(2)));
+    updateDailyZoom();
+  });
+  container.querySelector('#btn-fd-zoom-reset')?.addEventListener('click', () => {
+    dailyChartZoom = 1;
+    updateDailyZoom();
+  });
+
+  attachChartZoom(container.querySelector('#fin-daily-scroll'), {
+    getZoom: () => dailyChartZoom,
+    setZoom: (z) => { dailyChartZoom = z; },
+    minZoom: 1,
+    maxZoom: 6,
+    step: 0.25,
+    onZoomChange: (_nextZoom, restoreScroll) => updateDailyZoom(restoreScroll)
+  });
+
+  // Tooltip interactivo (mouse y táctil) de gastos diarios
+  bindDailyExpensesChart(container, dailySeriesByIso, currency);
+
   // Scope de gráfica
   const scopeSelect = container.querySelector('#fin-chart-scope');
   if (scopeSelect) {
@@ -586,6 +744,268 @@ export function renderFinance(container) {
   if (newBtn) {
     newBtn.addEventListener('click', () => openTxModal(currency, () => renderFinance(container)));
   }
+}
+
+function fmtBarLabel(amount, currency) {
+  const num = Math.round(Number(amount) || 0);
+  const sym = currency === 'USD' ? '$' : '';
+  if (num >= 10000) return `${sym}${(num / 1000).toFixed(1)}k`;
+  return `${sym}${num.toLocaleString('en-US')}`;
+}
+
+function buildDailyExpensesChartHTML({ series, periodTotal, avgPerDay, maxDay, maxVal, hasAnyExpense, currency }) {
+  if (!hasAnyExpense) {
+    return `<div class="empty-state">Registra gastos en el historial de movimientos para ver tu evolución día a día.</div>`;
+  }
+  if (!series.length || maxVal <= 0) {
+    return `<div class="empty-state">No hay gastos registrados en este rango.</div>`;
+  }
+
+  const W = 1000;
+  const H = 200;
+  const TOP_PAD = 24;
+  const plotH = H - TOP_PAD;
+  const n = series.length;
+  const slot = W / n;
+  const barW = Math.max(Math.min(slot * 0.64, 44), 4);
+  const baseMinPx = n > 18 ? n * 38 : 0;
+  const plotStyle = baseMinPx > 0
+    ? `width:${dailyChartZoom * 100}%;min-width:${Math.round(baseMinPx * dailyChartZoom)}px;`
+    : `width:${dailyChartZoom * 100}%;min-width:100%;`;
+
+  // Media móvil de 7 días
+  const avgPoints = [];
+  series.forEach((d, i) => {
+    const win = series.slice(Math.max(0, i - 6), i + 1);
+    const avg = win.reduce((acc, x) => acc + x.total, 0) / win.length;
+    const cx = (i * slot + slot / 2).toFixed(2);
+    const cy = (H - (avg / maxVal) * plotH).toFixed(2);
+    avgPoints.push(`${cx},${cy}`);
+  });
+
+  const valueLabels = [];
+  const bars = series.map((d, i) => {
+    const x = (i * slot + (slot - barW) / 2).toFixed(2);
+    const hitX = (i * slot).toFixed(2);
+    let bar = '';
+    if (d.total > 0) {
+      const ratio = d.total / maxVal;
+      const h = Math.max(ratio * plotH, 5);
+      const y = H - h;
+      const lvl = ratio >= 0.7 ? 'is-high' : ratio >= 0.35 ? 'is-mid' : 'is-low';
+      bar = `
+        <rect class="fin-dbar ${lvl}" data-fin-bar="${d.iso}" x="${x}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${h.toFixed(2)}" rx="2"/>
+        <rect class="fin-dbar-cap ${lvl}" data-fin-cap="${d.iso}" x="${x}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="2"/>
+      `;
+      const leftPct = (((i + 0.5) / n) * 100).toFixed(4);
+      const bottomPct = ((h / H) * 100).toFixed(2);
+      valueLabels.push(
+        `<span class="fin-dbar-val mono" data-fin-val="${d.iso}" style="left:${leftPct}%;bottom:${bottomPct}%;">${fmtBarLabel(d.total, currency)}</span>`
+      );
+    } else {
+      bar = `<rect class="fin-dbar-zero" data-fin-bar="${d.iso}" x="${x}" y="${H - 2}" width="${barW.toFixed(2)}" height="2" rx="1"/>`;
+    }
+    return `${bar}<rect class="fin-dhit" x="${hitX}" y="0" width="${slot.toFixed(2)}" height="${H}" data-fin-day="${d.iso}"/>`;
+  }).join('');
+
+  const mid = series[Math.floor((n - 1) / 2)];
+  const xLabels = n > 1
+    ? `<span>${formatDateDMY(series[0].iso)}</span>${n > 6 ? `<span>${formatDateDMY(mid.iso)}</span>` : ''}<span>${formatDateDMY(series[n - 1].iso)}</span>`
+    : `<span>${formatDateDMY(series[0].iso)}</span>`;
+
+  const daysWithSpend = series.filter(d => d.total > 0).length;
+
+  return `
+    <div class="fin-daily-summary">
+      <div class="fin-daily-headline">
+        <span class="fin-daily-total-val mono">${fmtMoney(periodTotal, currency)}</span>
+        <span class="text-muted">gastado en el período · <span class="mono">${daysWithSpend}/${n}</span> días con gasto · prom. <span class="mono">${fmtMoney(avgPerDay, currency)}/d</span>${maxDay && maxDay.total > 0 ? ` · pico <span class="mono">${formatDateDMY(maxDay.iso)} (${fmtMoney(maxDay.total, currency)})</span>` : ''}</span>
+      </div>
+    </div>
+    <div class="fin-daily-stage" id="fin-daily-stage">
+      <div class="fin-daily-wrap">
+        <div class="fin-daily-yaxis mono" aria-hidden="true">
+          <span>${fmtMoney(maxVal, currency)}</span>
+          <span>${fmtMoney(maxVal / 2, currency)}</span>
+          <span>0</span>
+        </div>
+        <div class="fin-daily-scroll" id="fin-daily-scroll">
+          <div class="fin-daily-plot" data-base-width="${baseMinPx}" style="${plotStyle}">
+            <div class="fin-daily-canvas">
+              <svg class="fin-daily-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Gastos diarios del historial">
+                <defs>
+                  <linearGradient id="fin-grad-low" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="var(--accent-subtle)" />
+                    <stop offset="100%" stop-color="var(--accent-primary)" />
+                  </linearGradient>
+                  <linearGradient id="fin-grad-mid" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="var(--cyber-yellow-border)" />
+                    <stop offset="100%" stop-color="var(--cyber-yellow)" />
+                  </linearGradient>
+                  <linearGradient id="fin-grad-high" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stop-color="var(--status-danger-bg)" />
+                    <stop offset="100%" stop-color="var(--status-danger)" />
+                  </linearGradient>
+                </defs>
+                <line class="fin-dgrid" x1="0" y1="${TOP_PAD}" x2="${W}" y2="${TOP_PAD}"/>
+                <line class="fin-dgrid" x1="0" y1="${TOP_PAD + plotH / 2}" x2="${W}" y2="${TOP_PAD + plotH / 2}"/>
+                <line class="fin-dgrid" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}"/>
+                ${bars}
+                ${avgPoints.length > 1 ? `<polyline class="fin-dline" points="${avgPoints.join(' ')}"/>` : ''}
+              </svg>
+              <div class="fin-daily-overlay" aria-hidden="true">${valueLabels.join('')}</div>
+            </div>
+            <div class="fin-daily-xaxis mono">${xLabels}</div>
+          </div>
+        </div>
+      </div>
+      <div class="fin-daily-tooltip" id="fin-daily-tooltip" role="tooltip" hidden></div>
+    </div>
+    <div class="fin-daily-legend">
+      <span><i class="fin-key-low"></i>Gasto moderado</span>
+      <span><i class="fin-key-mid"></i>Gasto medio</span>
+      <span><i class="fin-key-high"></i>Pico de gasto</span>
+      <span><i class="fin-key-line"></i>Media móvil 7 días</span>
+      <span class="fin-daily-legend-hint">Pasa el cursor o toca una barra para ver el detalle</span>
+    </div>
+  `;
+}
+
+function bindDailyExpensesChart(container, dailySeriesByIso, currency) {
+  if (activeOutsideTooltipHandler) {
+    document.removeEventListener('click', activeOutsideTooltipHandler);
+    activeOutsideTooltipHandler = null;
+  }
+
+  const stage = container.querySelector('#fin-daily-stage');
+  const tooltip = container.querySelector('#fin-daily-tooltip');
+  const scrollWrap = container.querySelector('#fin-daily-scroll');
+  if (!stage || !tooltip) return;
+
+  let pinnedIso = null;
+  let activeIso = null;
+
+  const clearActiveBar = () => {
+    stage.querySelectorAll('.fin-dbar.is-active, .fin-dbar-zero.is-active, .fin-dhit.is-active, .fin-dbar-val.is-active').forEach(el => {
+      el.classList.remove('is-active');
+    });
+  };
+
+  const hideTooltip = () => {
+    tooltip.hidden = true;
+    activeIso = null;
+    pinnedIso = null;
+    clearActiveBar();
+  };
+
+  const renderTooltipContent = (day) => {
+    const maxItems = 6;
+    const shown = day.items.slice(0, maxItems);
+    const remaining = day.items.length - shown.length;
+    return `
+      <div class="fin-tt-head">
+        <span class="fin-tt-date mono">${escapeHtml(formatDayWithWeekday(day.iso))}</span>
+        <span class="fin-tt-total mono ${day.total > 0 ? 'text-danger' : 'text-muted'}">${day.total > 0 ? `-${fmtMoney(day.total, currency)}` : fmtMoney(0, currency)}</span>
+      </div>
+      ${shown.length === 0 ? `
+        <div class="fin-tt-empty">Sin gastos registrados este día.</div>
+      ` : `
+        <div class="fin-tt-list">
+          ${shown.map(item => `
+            <div class="fin-tt-item">
+              <div class="fin-tt-item-main">
+                <span class="fin-tt-desc">${escapeHtml(item.description)}</span>
+                <span class="fin-tt-cat">${escapeHtml(item.category)}</span>
+              </div>
+              <span class="fin-tt-amt mono">${fmtMoney(item.amount, currency)}</span>
+            </div>
+          `).join('')}
+          ${remaining > 0 ? `<div class="fin-tt-more mono">+${remaining} gasto${remaining === 1 ? '' : 's'} más</div>` : ''}
+        </div>
+      `}
+    `;
+  };
+
+  const showTooltip = (hitEl, iso) => {
+    const day = dailySeriesByIso.get(iso);
+    if (!day) return;
+
+    clearActiveBar();
+    activeIso = iso;
+    hitEl.classList.add('is-active');
+    const barEl = stage.querySelector(`[data-fin-bar="${iso}"]`);
+    if (barEl) barEl.classList.add('is-active');
+    const valEl = stage.querySelector(`[data-fin-val="${iso}"]`);
+    if (valEl) valEl.classList.add('is-active');
+
+    tooltip.innerHTML = renderTooltipContent(day);
+    tooltip.hidden = false;
+
+    const stageRect = stage.getBoundingClientRect();
+    const hitRect = hitEl.getBoundingClientRect();
+    const ttRect = tooltip.getBoundingClientRect();
+
+    const centerX = (hitRect.left - stageRect.left) + (hitRect.width / 2);
+    let left = centerX - (ttRect.width / 2);
+    left = Math.max(6, Math.min(left, stageRect.width - ttRect.width - 6));
+
+    // Colocar arriba de la barra o en la zona superior del stage sin salirse
+    let top = 6;
+    if (barEl && day.total > 0) {
+      const barRect = barEl.getBoundingClientRect();
+      const barTopRel = barRect.top - stageRect.top;
+      if (barTopRel - ttRect.height - 10 >= 0) {
+        top = barTopRel - ttRect.height - 10;
+      } else {
+        top = 6;
+      }
+    }
+
+    tooltip.style.left = `${Math.round(left)}px`;
+    tooltip.style.top = `${Math.round(top)}px`;
+  };
+
+  stage.querySelectorAll('.fin-dhit[data-fin-day]').forEach(hit => {
+    const iso = hit.getAttribute('data-fin-day');
+
+    hit.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'touch' || pinnedIso) return;
+      showTooltip(hit, iso);
+    });
+
+    hit.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (pinnedIso === iso) {
+        hideTooltip();
+      } else {
+        pinnedIso = iso;
+        showTooltip(hit, iso);
+      }
+    });
+  });
+
+  stage.addEventListener('mouseleave', () => {
+    if (!pinnedIso && activeIso) hideTooltip();
+  });
+
+  if (scrollWrap) {
+    // Mostrar los días más recientes al final del scroll cuando el rango es ancho
+    requestAnimationFrame(() => {
+      if (scrollWrap.scrollWidth > scrollWrap.clientWidth) {
+        scrollWrap.scrollLeft = scrollWrap.scrollWidth;
+      }
+    });
+    scrollWrap.addEventListener('scroll', () => {
+      if (!tooltip.hidden) hideTooltip();
+    }, { passive: true });
+  }
+
+  activeOutsideTooltipHandler = (e) => {
+    if (!stage.contains(e.target) && !tooltip.hidden) {
+      hideTooltip();
+    }
+  };
+  document.addEventListener('click', activeOutsideTooltipHandler);
 }
 
 function renderSimpleListHTML(items, listKey, currency, emptyText, colorClass) {

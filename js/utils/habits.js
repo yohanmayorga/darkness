@@ -31,6 +31,17 @@ export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 export const DAY_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 export const DAY_LETTER = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 export const DAY_PLURAL = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados'];
+export const DAY_SINGULAR = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+/**
+ * Detecta hábitos de sueño que se registran al despertar (al día siguiente):
+ * un registro del miércoles refleja cómo se durmió la noche de martes a miércoles.
+ */
+export function isNextDaySleepHabit(h) {
+  if (!h) return false;
+  if (h.id === 'hab-sleep' || h.icon === 'bed') return true;
+  return /\b(dormir|sue[ñn]o|sleep)\b/i.test(String(h.name || ''));
+}
 
 export const TIME_OF_DAY = {
   morning: 'Mañana',
@@ -261,12 +272,26 @@ export function generateAdvice(habits, today) {
   }
 
   // 1. Debilidad recurrente en este día de la semana
+  // Para hábitos de sueño (registrados al despertar al día siguiente), "esta noche"
+  // se registrará mañana: evaluamos el historial de mañana (noche de hoy a mañana).
+  const tomorrow = addDays(today, 1);
+  const tomorrowWd = weekdayOf(tomorrow);
+  const weakCandidates = [...pending];
+  habits.forEach(h => {
+    if (isNextDaySleepHabit(h) && isScheduled(h, tomorrow) && !weakCandidates.some(x => x.id === h.id)) {
+      weakCandidates.push(h);
+    }
+  });
+
   let weak = null;
-  pending.forEach(h => {
+  weakCandidates.forEach(h => {
+    const isSleep = isNextDaySleepHabit(h);
+    if (isSleep && !isScheduled(h, tomorrow)) return;
+    const anchor = isSleep ? tomorrow : today;
     let n = 0;
     let done = 0;
     for (let k = 1; k <= 12; k++) {
-      const iso = addDays(today, -7 * k);
+      const iso = addDays(anchor, -7 * k);
       if (iso < h.startDate) break;
       if (!isScheduled(h, iso)) continue;
       n++;
@@ -277,10 +302,14 @@ export function generateAdvice(habits, today) {
     const overall = habitRate(h, addDays(today, -84), yesterday);
     if (overall.total < 6 || rateW > 0.5 || rateW > overall.rate - 0.15) return;
     const gap = overall.rate - rateW;
-    if (!weak || gap > weak.gap) weak = { h, rateW, overall: overall.rate, gap };
+    if (!weak || gap > weak.gap) weak = { h, rateW, overall: overall.rate, gap, isSleep };
   });
   if (weak) {
-    tips.push(`Los ${DAY_PLURAL[wd]} tiendes a fallar en ${strong(weak.h.name)}: sólo ${pctText(weak.rateW)} de cumplimiento frente a ${pctText(weak.overall)} el resto de la semana. Cambia eso hoy.`);
+    if (weak.isSleep) {
+      tips.push(`Las noches de ${DAY_SINGULAR[wd]} a ${DAY_SINGULAR[tomorrowWd]} tiendes a fallar en ${strong(weak.h.name)}: sólo ${pctText(weak.rateW)} de cumplimiento frente a ${pctText(weak.overall)} el resto de la semana. Cambia eso esta noche.`);
+    } else {
+      tips.push(`Los ${DAY_PLURAL[wd]} tiendes a fallar en ${strong(weak.h.name)}: sólo ${pctText(weak.rateW)} de cumplimiento frente a ${pctText(weak.overall)} el resto de la semana. Cambia eso hoy.`);
+    }
     used.add(weak.h.id);
   }
 
@@ -381,7 +410,18 @@ export function generateHabitSummary(habit, today) {
     const best = validDays[0];
     const worst = validDays[validDays.length - 1];
     const gap = Math.round((best.rate - worst.rate) * 100);
-    if (gap >= 10) {
+    if (isNextDaySleepHabit(habit)) {
+      const nightLabel = wdIdx => `${DAY_SINGULAR[(wdIdx + 6) % 7]} a ${DAY_SINGULAR[wdIdx]}`;
+      if (gap >= 10) {
+        lines.push(
+          `Mejor descanso en las noches de ${strong(nightLabel(best.wd))} (${pctText(best.rate)}) y menor en las de ${strong(nightLabel(worst.wd))} (${pctText(worst.rate)}).`
+        );
+      } else {
+        lines.push(
+          `Descanso parejo durante la semana: entre ${pctText(worst.rate)} (noches de ${nightLabel(worst.wd)}) y ${pctText(best.rate)} (noches de ${nightLabel(best.wd)}).`
+        );
+      }
+    } else if (gap >= 10) {
       lines.push(
         `Mayor frecuencia los ${strong(DAY_PLURAL[best.wd])} (${pctText(best.rate)}) y menor los ${strong(DAY_PLURAL[worst.wd])} (${pctText(worst.rate)}).`
       );

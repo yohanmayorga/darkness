@@ -12,7 +12,7 @@ import {
   isScheduled, isDone, offReason, dayStats, rangeSeries, aggregate,
   habitRate, habitStreak, bestStreak,
   formatShort, formatLong, scheduleLabel, pctText, generateAdvice, generateHabitSummary
-} from '../utils/habits.js?v=5.0.0';
+} from '../utils/habits.js?v=5.1.0';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const CAL_WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];

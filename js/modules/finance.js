@@ -259,6 +259,14 @@ export function renderFinance(container) {
     currency
   });
 
+  const periodExpenseTxs = validExpenseTxs.filter(t => t.date >= dailyStart && t.date <= dailyEnd);
+  const cyberIntelHTML = buildFinanceCyberIntelHTML({
+    txs: periodExpenseTxs.length ? periodExpenseTxs : validExpenseTxs,
+    dailySeries,
+    currency,
+    rangeLabel: dailyChartRange === 'all' ? 'ALL' : `${dailyChartRange}D`
+  });
+
   container.innerHTML = `
     <header class="page-header">
       <div class="page-title-group">
@@ -418,24 +426,31 @@ export function renderFinance(container) {
       </div>
     </section>
 
-    <section class="card fin-daily-card cyber-frame-wrap" style="margin-bottom:20px;">
-      ${hudFrameOrnaments()}
-      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
-        <h2 class="card-title">${icon('finance')} Gastos diarios</h2>
-        <div class="fin-daily-controls">
-          <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica de gastos">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-fd-zoom-out" title="Alejar zoom">−</button>
-            <button type="button" class="btn btn-secondary btn-sm mono" id="btn-fd-zoom-reset" title="Restablecer zoom">${formatZoomLabel(dailyChartZoom)}</button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-fd-zoom-in" title="Acercar zoom">+</button>
-          </div>
-          <div class="fin-range" role="group" aria-label="Rango del gráfico de gastos diarios">
-            ${DAILY_RANGES.map(r => `
-              <button type="button" class="fin-range-btn ${dailyChartRange === r.key ? 'active' : ''}" data-fin-daily-range="${r.key}">${r.label}</button>
-            `).join('')}
+    <section class="fin-visual-grid">
+      <div class="card fin-cyber-intel-card cyber-frame-wrap">
+        ${hudFrameOrnaments()}
+        ${cyberIntelHTML}
+      </div>
+
+      <div class="card fin-daily-card cyber-frame-wrap">
+        ${hudFrameOrnaments()}
+        <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+          <h2 class="card-title">${icon('finance')} Gastos diarios</h2>
+          <div class="fin-daily-controls">
+            <div style="display:inline-flex;align-items:center;gap:2px;" role="group" aria-label="Zoom de la gráfica de gastos">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-fd-zoom-out" title="Alejar zoom">−</button>
+              <button type="button" class="btn btn-secondary btn-sm mono" id="btn-fd-zoom-reset" title="Restablecer zoom">${formatZoomLabel(dailyChartZoom)}</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-fd-zoom-in" title="Acercar zoom">+</button>
+            </div>
+            <div class="fin-range" role="group" aria-label="Rango del gráfico de gastos diarios">
+              ${DAILY_RANGES.map(r => `
+                <button type="button" class="fin-range-btn ${dailyChartRange === r.key ? 'active' : ''}" data-fin-daily-range="${r.key}">${r.label}</button>
+              `).join('')}
+            </div>
           </div>
         </div>
+        ${dailyChartHTML}
       </div>
-      ${dailyChartHTML}
     </section>
 
     <section class="card" style="margin-bottom:20px;">
@@ -751,6 +766,237 @@ function fmtBarLabel(amount, currency) {
   const sym = currency === 'USD' ? '$' : '';
   if (num >= 10000) return `${sym}${(num / 1000).toFixed(1)}k`;
   return `${sym}${num.toLocaleString('en-US')}`;
+}
+
+/**
+ * Panel Cyberpunk de Inteligencia Financiera (1/4 derecho):
+ * Radar heptagonal por día de semana + vectores de mayor fuga + patrón detectado
+ */
+function buildFinanceCyberIntelHTML({ txs, dailySeries, currency, rangeLabel }) {
+  const header = `
+    <div class="card-header">
+      <h2 class="card-title">${icon('finance')} Radar de Fugas</h2>
+      <span class="cyber-tag">SCAN.${rangeLabel}</span>
+    </div>
+  `;
+
+  if (!txs.length) {
+    return `
+      ${header}
+      <div class="fin-cyber-stage is-empty">
+        <div class="fin-cyber-empty mono">SIN TELEMETRÍA DE GASTOS</div>
+      </div>
+    `;
+  }
+
+  const WEEKDAYS = [
+    { dow: 1, short: 'L', name: 'Lunes' },
+    { dow: 2, short: 'M', name: 'Martes' },
+    { dow: 3, short: 'X', name: 'Miércoles' },
+    { dow: 4, short: 'J', name: 'Jueves' },
+    { dow: 5, short: 'V', name: 'Viernes' },
+    { dow: 6, short: 'S', name: 'Sábado' },
+    { dow: 0, short: 'D', name: 'Domingo' }
+  ];
+
+  // 1. Gasto acumulado por día de la semana
+  const dowTotals = new Map(WEEKDAYS.map(w => [w.dow, 0]));
+  const dowCounts = new Map(WEEKDAYS.map(w => [w.dow, 0]));
+  const catTotals = new Map();
+  let totalSpent = 0;
+
+  txs.forEach(t => {
+    const amt = Number(t.amount) || 0;
+    if (amt <= 0) return;
+    totalSpent += amt;
+    const dow = parseISODate(t.date).getDay();
+    dowTotals.set(dow, (dowTotals.get(dow) || 0) + amt);
+    dowCounts.set(dow, (dowCounts.get(dow) || 0) + 1);
+    const cat = t.category || 'Otro';
+    catTotals.set(cat, (catTotals.get(cat) || 0) + amt);
+  });
+
+  const maxDowVal = Math.max(...WEEKDAYS.map(w => dowTotals.get(w.dow) || 0), 1);
+  let peakDay = WEEKDAYS[0];
+  WEEKDAYS.forEach(w => {
+    if ((dowTotals.get(w.dow) || 0) > (dowTotals.get(peakDay.dow) || 0)) {
+      peakDay = w;
+    }
+  });
+  const peakVal = dowTotals.get(peakDay.dow) || 0;
+
+  // 2. Top 3 categorías que más drenan el dinero
+  const topDrains = [...catTotals.entries()]
+    .map(([cat, amount]) => ({
+      cat,
+      amount,
+      pct: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0
+    }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+
+  // 3. Patrón conductual detectado
+  const wkndTotal = (dowTotals.get(5) || 0) + (dowTotals.get(6) || 0) + (dowTotals.get(0) || 0);
+  const wkndPct = totalSpent > 0 ? Math.round((wkndTotal / totalSpent) * 100) : 0;
+  const zeroDays = (dailySeries || []).filter(d => d.total === 0).length;
+  const totalDays = (dailySeries || []).length || 1;
+  const zeroPct = Math.round((zeroDays / totalDays) * 100);
+
+  let patternTag = 'PATRÓN';
+  let patternText = `Pico los ${peakDay.name} (${fmtBarLabel(peakVal, currency)})`;
+  if (wkndPct >= 52) {
+    patternTag = 'FINDE';
+    patternText = `${wkndPct}% de tu gasto ocurre Vie–Dom`;
+  } else if (topDrains[0] && topDrains[0].pct >= 40) {
+    patternTag = 'FUGA #1';
+    patternText = `${topDrains[0].cat} absorbe ${topDrains[0].pct}%`;
+  } else if (zeroPct >= 45) {
+    patternTag = 'CONTROL';
+    patternText = `${zeroDays} días sin gasto (${zeroPct}%)`;
+  }
+
+  // 4. Geometría SVG del Radar Heptagonal (7 vértices = L..D)
+  const cx = 130;
+  const cy = 104;
+  const maxR = 66;
+  const ringRadii = [22, 44, maxR];
+
+  const vertexPoint = (idx, r) => {
+    const a = -Math.PI / 2 + (idx * 2 * Math.PI) / 7;
+    return {
+      x: cx + r * Math.cos(a),
+      y: cy + r * Math.sin(a)
+    };
+  };
+
+  const heptagonPath = (r) =>
+    WEEKDAYS.map((_, idx) => {
+      const p = vertexPoint(idx, r);
+      return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    }).join(' ');
+
+  const dataCoords = WEEKDAYS.map((w, idx) => {
+    const val = dowTotals.get(w.dow) || 0;
+    const r = val > 0 ? Math.max(11, (val / maxDowVal) * maxR) : 6;
+    const p = vertexPoint(idx, r);
+    const lbl = vertexPoint(idx, maxR + 15);
+    return {
+      ...w,
+      val,
+      count: dowCounts.get(w.dow) || 0,
+      isPeak: w.dow === peakDay.dow && val > 0,
+      x: p.x,
+      y: p.y,
+      lx: lbl.x,
+      ly: lbl.y
+    };
+  });
+
+  const dataPoly = dataCoords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+
+  return `
+    ${header}
+    <div class="fin-cyber-stage">
+      <div class="fin-cyber-scanline" aria-hidden="true"></div>
+      <svg class="fin-radar-svg" viewBox="0 0 260 206" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Radar de gasto por día de la semana. Día pico: ${peakDay.name}">
+        <defs>
+          <filter id="fin-radar-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="2.2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <radialGradient id="fin-radar-area" cx="50%" cy="50%" r="55%">
+            <stop offset="0%" stop-color="var(--status-danger)" stop-opacity="0.42" />
+            <stop offset="100%" stop-color="var(--status-danger)" stop-opacity="0.10" />
+          </radialGradient>
+          <linearGradient id="fin-sweep-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="var(--cyber-yellow)" stop-opacity="0.28" />
+            <stop offset="100%" stop-color="var(--cyber-yellow)" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+
+        <!-- Telemetría superior -->
+        <text x="6" y="12" class="fin-radar-micro">DRAIN // MATRIX</text>
+        <g>
+          <circle cx="250" cy="9" r="2.6" fill="var(--status-danger)" class="fin-radar-led" />
+          <text x="243" y="12" text-anchor="end" class="fin-radar-micro">PICO: ${peakDay.name.slice(0, 3).toUpperCase()}</text>
+        </g>
+
+        <!-- Anillos heptagonales concéntricos -->
+        ${ringRadii.map((r, i) => `
+          <polygon
+            points="${heptagonPath(r)}"
+            fill="none"
+            stroke="${i === 2 ? 'var(--hud-border-strong)' : 'var(--hud-border-subtle)'}"
+            stroke-width="${i === 2 ? '1' : '0.8'}"
+            ${i === 1 ? 'stroke-dasharray="3 3"' : ''}
+          />
+        `).join('')}
+
+        <!-- Radios hacia cada día de la semana -->
+        ${WEEKDAYS.map((_, idx) => {
+          const p = vertexPoint(idx, maxR);
+          return `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="var(--hud-border-subtle)" stroke-width="0.8" />`;
+        }).join('')}
+
+        <!-- Haz de radar giratorio -->
+        <g class="fin-radar-sweep">
+          <path d="M ${cx} ${cy} L ${cx} ${cy - maxR} A ${maxR} ${maxR} 0 0 1 ${(cx + maxR * 0.65).toFixed(1)} ${(cy - maxR * 0.76).toFixed(1)} Z" fill="url(#fin-sweep-grad)" />
+          <line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - maxR}" stroke="var(--cyber-yellow)" stroke-width="1" opacity="0.65" />
+        </g>
+
+        <!-- Polígono de energía de gasto semanal -->
+        <polygon points="${dataPoly}" fill="url(#fin-radar-area)" stroke="var(--status-danger)" stroke-width="1.6" stroke-linejoin="round" filter="url(#fin-radar-glow)" />
+
+        <!-- Nodos por día y mira pulsante en el día pico -->
+        ${dataCoords.map(c => `
+          <g class="fin-radar-node${c.isPeak ? ' is-peak' : ''}">
+            <title>${c.name}: ${fmtMoney(c.val, currency)} (${c.count} mov.)</title>
+            ${c.isPeak ? `
+              <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="7.5" fill="none" stroke="var(--status-danger)" stroke-width="1.1" class="fin-radar-target" />
+            ` : ''}
+            <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${c.isPeak ? '3.3' : '2.3'}" fill="${c.isPeak ? 'var(--status-danger)' : 'var(--hud-accent)'}" />
+            <text x="${c.lx.toFixed(1)}" y="${(c.ly + 3).toFixed(1)}" text-anchor="middle" class="fin-radar-day${c.isPeak ? ' is-peak' : ''}">${c.short}</text>
+          </g>
+        `).join('')}
+
+        <!-- Núcleo central -->
+        <circle cx="${cx}" cy="${cy}" r="2.2" fill="var(--hud-text-muted)" />
+      </svg>
+
+      <!-- Top 3 categorías que drenan más dinero -->
+      <div class="fin-drain-block">
+        <div class="fin-drain-head mono">
+          <span>TOP FUGAS</span>
+          <span>${fmtBarLabel(totalSpent, currency)}</span>
+        </div>
+        <div class="fin-drain-list">
+          ${topDrains.map((d, idx) => {
+            const lvl = idx === 0 ? 'is-crit' : idx === 1 ? 'is-warn' : 'is-base';
+            return `
+              <div class="fin-drain-row ${lvl}" title="${escapeHtml(d.cat)}: ${fmtMoney(d.amount, currency)} (${d.pct}%)">
+                <div class="fin-drain-meta">
+                  <span class="fin-drain-cat">${escapeHtml(d.cat)}</span>
+                  <span class="fin-drain-val mono">${d.pct}% · ${fmtBarLabel(d.amount, currency)}</span>
+                </div>
+                <div class="fin-drain-track">
+                  <span class="fin-drain-fill" style="width:${Math.max(d.pct, 6)}%;"></span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Patrón conductual detectado -->
+      <div class="fin-pattern-footer">
+        <span class="fin-pattern-pill mono">${patternTag}</span>
+        <span class="fin-pattern-text">${escapeHtml(patternText)}</span>
+      </div>
+    </div>
+  `;
 }
 
 function buildDailyExpensesChartHTML({ series, periodTotal, avgPerDay, maxDay, maxVal, hasAnyExpense, currency }) {

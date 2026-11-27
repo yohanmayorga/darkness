@@ -1567,6 +1567,270 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Layout superior Finanzas: Radar de Fugas Cyberpunk (1/4 izq) + Gráfica principal (3/4 der) */
+.fin-visual-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 3fr);
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+
+.fin-daily-card,
+.fin-cyber-intel-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.fin-cyber-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  background-color: var(--hud-bg-header);
+  background-image: var(--cyber-grid);
+  background-size: 16px 16px;
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.fin-cyber-stage.is-empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.fin-cyber-empty {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--hud-text-muted);
+}
+
+.fin-cyber-scanline {
+  position: absolute;
+  inset: -40% 0 auto 0;
+  height: 32%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--hud-accent-subtle) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  animation: finScanSweep 5.4s linear infinite;
+}
+
+.fin-radar-svg {
+  width: 100%;
+  flex: 1 1 auto;
+  max-height: 196px;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.fin-radar-micro {
+  font-family: var(--font-mono);
+  font-size: 7.2px;
+  letter-spacing: 0.1em;
+  fill: var(--hud-text-muted);
+}
+
+.fin-radar-day {
+  font-family: var(--font-mono);
+  font-size: 8.4px;
+  fill: var(--hud-text-secondary);
+}
+
+.fin-radar-day.is-peak {
+  fill: var(--status-danger);
+  font-weight: 700;
+}
+
+.fin-radar-sweep {
+  transform-origin: 130px 104px;
+  animation: finRadarSpin 8s linear infinite;
+  will-change: transform;
+}
+
+.fin-radar-target {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: finTargetPulse 1.9s ease-in-out infinite;
+}
+
+.fin-radar-led {
+  animation: finLedBlink 1.4s ease-in-out infinite;
+}
+
+.fin-drain-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 7px;
+  background-color: var(--hud-bg);
+  border: 1px solid var(--hud-border-subtle);
+  border-radius: var(--radius-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.fin-drain-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.58rem;
+  letter-spacing: 0.09em;
+  color: var(--hud-text-muted);
+}
+
+.fin-drain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fin-drain-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fin-drain-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.66rem;
+}
+
+.fin-drain-cat {
+  color: var(--hud-text);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.fin-drain-val {
+  color: var(--hud-text-secondary);
+  font-size: 0.62rem;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-drain-track {
+  width: 100%;
+  height: 5px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--hud-border-subtle) 0 4px,
+    transparent 4px 6px
+  );
+  overflow: hidden;
+}
+
+.fin-drain-fill {
+  display: block;
+  height: 100%;
+  -webkit-mask-image: repeating-linear-gradient(
+    to right,
+    var(--hud-text) 0 4px,
+    transparent 4px 6px
+  );
+  mask-image: repeating-linear-gradient(
+    to right,
+    var(--hud-text) 0 4px,
+    transparent 4px 6px
+  );
+  transition: width 0.25s ease;
+}
+
+.fin-drain-row.is-crit .fin-drain-fill {
+  background-color: var(--status-danger);
+}
+
+.fin-drain-row.is-warn .fin-drain-fill {
+  background-color: var(--cyber-yellow);
+}
+
+.fin-drain-row.is-base .fin-drain-fill {
+  background-color: var(--hud-accent);
+}
+
+.fin-pattern-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--hud-border);
+  position: relative;
+  z-index: 1;
+}
+
+.fin-pattern-pill {
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  padding: 2px 5px;
+  border-radius: 2px;
+  background-color: var(--status-danger-bg);
+  color: var(--status-danger);
+  border: 1px solid var(--status-danger);
+  flex-shrink: 0;
+}
+
+.fin-pattern-text {
+  font-size: 0.66rem;
+  color: var(--hud-text-secondary);
+  line-height: 1.25;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes finRadarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes finTargetPulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.9; }
+  50% { transform: scale(1.3); opacity: 0.25; }
+}
+
+@keyframes finLedBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@keyframes finScanSweep {
+  0% { transform: translateY(0%); }
+  100% { transform: translateY(420%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fin-radar-sweep,
+  .fin-radar-target,
+  .fin-radar-led,
+  .fin-cyber-scanline {
+    animation: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .fin-visual-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Gráfico de barras: Gastos diarios (Historial — Cyberpunk HUD) */
 .fin-daily-controls {
   display: flex;

@@ -4,7 +4,7 @@ import { renderTasks } from './modules/tasks.js?v=6.9.5';
 import { renderBody } from './modules/body.js?v=6.9.8';
 import { renderReading } from './modules/reading.js?v=6.9.5';
 import { renderJournal } from './modules/journal.js?v=6.9.10';
-import { renderFinance } from './modules/finance.js?v=6.9.8';
+import { renderFinance } from './modules/finance.js?v=6.9.10';
 import { renderF1 } from './modules/f1.js?v=1.3.2';
 import { renderSettings } from './modules/settings.js?v=6.9.6';
 
